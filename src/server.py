@@ -10,11 +10,12 @@ from ConfigParser import RawConfigParser
 import logging
 import time
 import threading
+import platform
 
 import schedule
 
 import common
-import flow
+from flow import Flow
 import ldap_reader
 import http
 
@@ -22,9 +23,14 @@ import http
 SERVER_CONFIG = "Server"
 LDAP_MAIN_CONFIG_SECTION = "LDAP"
 LDAP_VENDOR_CONFIG_SECTION = "LDAP Vendor"
-FLOW_CONFIG_SECTION = "Flow"
+SEMAPHOR_CONFIG_SECTION = "Semaphor"
 
 LOG = logging.getLogger("server")
+
+
+class SemaphorLDAPServerError(Exception):
+    """Exception class used for Server errors."""
+    pass
 
 
 class Server(object):
@@ -43,7 +49,14 @@ class Server(object):
         self.read_config(options.config)
 
         self.init_ldap()
-        self.init_flow()
+
+        try:
+            self.init_flow()
+        except Flow.FlowError as flow_err:
+            if self.flow:
+                self.flow.terminate()
+            raise SemaphorLDAPServerError("Semaphor Init: %s" % str(flow_err))
+
         self.init_cron()
         self.init_http()
 
@@ -53,15 +66,16 @@ class Server(object):
         self.loop_flow = threading.Event()
         self.threads_running = False
 
-        config_written = self.write_config()
+        config_written = self.write_auto_connect_config()
         if config_written:
             self.initialized = True
 
         LOG.info("server initialized")
 
         # Commented out for now
-        # LOG.info("going daemon")
-        # self.daemonize()
+        # if sys.platform == "linux2":
+        #     LOG.info("going daemon")
+        #     self.daemonize()
 
     def read_config(self, config_file):
         """Load config sections from a config file into dicts.
@@ -76,7 +90,7 @@ class Server(object):
         self.ldap_vendor_config = config_dict[
             LDAP_VENDOR_CONFIG_SECTION]
         self.flow_config = config_dict[
-            FLOW_CONFIG_SECTION]
+            SEMAPHOR_CONFIG_SECTION]
         self.server_config = config_dict[
             SERVER_CONFIG]
 
@@ -90,7 +104,7 @@ class Server(object):
         self.ldap_conn = ldap_reader.LdapConnection(
             self.ldap_config["uri"],
             self.ldap_config["base_dn"],
-            self.ldap_config["admin_dn"],
+            self.ldap_config["admin_user"],
             self.ldap_config["admin_pw"],
             self.ldap_vendor_config)
 
@@ -100,45 +114,58 @@ class Server(object):
         - If the account exists, but there's no device, it creates a device.
         - If the account and device already exist, it will use them.
         """
-        self.flow = flow.Flow()
-        # Try to start_up first, an account+device may already be created
+        self.flow = Flow()
+
+        # An Account + Device may already be local
+        # Try to start up first
         try:
-            self.flow.start_up(self.flow_config["username"])
+            self.flow.start_up(
+                username=self.flow_config["username"],
+                server_uri=self.flow_config["server_uri"],
+            )
             LOG.debug(
                 "local account '%s' started",
                 self.flow_config["username"])
-        except flow.Flow.FlowError as start_up_err:
+            return
+        except Flow.FlowError as start_up_err:
             LOG.debug("start_up failed: '%s'", str(start_up_err))
-            # Account doesn't exist locally, try to create the account first
-            # This automatically creates a local device
-            try:
-                self.flow.create_account(
-                    self.flow_config["username"],
-                    self.flow_config["password"],
-                    self.flow_config["server_uri"],
-                    self.flow_config["device_name"],
-                    "",  # Phone Number
-                )
-                LOG.info(
-                    "account '%s' with device '%s' created",
-                    self.flow_config["username"],
-                    self.flow_config["device_name"])
-            except flow.Flow.FlowError as create_account_err:
-                LOG.debug(
-                    "create_account failed: '%s'",
-                    str(create_account_err))
-                # Account exists, create new device
-                self.flow.create_device(
-                    self.flow_config["username"],
-                    self.flow_config["password"],
-                    self.flow_config["server_uri"],
-                    self.flow_config["device_name"],
-                    self.flow_config["platform"],
-                    self.flow_config["os_release"])
-                LOG.info(
-                    "local Device '%s' for '%s' created",
-                    self.flow_config["device_name"],
-                    self.flow_config["username"])
+
+        # Account may already exist, but not locally.
+        # Try to create new device
+        try:
+            self.flow.create_device(
+                username=self.flow_config["username"],
+                password=self.flow_config["password"],
+                server_uri=self.flow_config["server_uri"],
+                device_name=self.flow_config["device_name"],
+                platform=sys.platform,
+                os_release=platform.release(),
+            )
+            LOG.info(
+                "local Device '%s' for '%s' created",
+                self.flow_config["device_name"],
+                self.flow_config["username"])
+            return
+        except Flow.FlowError as create_device_err:
+            LOG.debug(
+                "create_device failed: '%s'",
+                str(create_device_err))
+
+        # Account may not exist.
+        # Try to create Account + Device
+        self.flow.create_account(
+            username=self.flow_config["username"],
+            password=self.flow_config["password"],
+            server_uri=self.flow_config["server_uri"],
+            device_name=self.flow_config["device_name"],
+            phone_number=self.flow_config["phone_number"],
+            platform=sys.platform,
+            os_release=platform.release(),
+        )
+        LOG.info(
+            "account '%s' with device '%s' created",
+            self.flow_config["username"],
+            self.flow_config["device_name"])
 
     def init_http(self):
         """Initializes the HTTPServer instance."""
@@ -152,11 +179,11 @@ class Server(object):
         LOG.debug(users)
         return users
 
-    def write_config(self):
+    def write_auto_connect_config(self):
         """Write config for CLI mode to $SEMLDAP_CONFIGDIR."""
-        if not common.CONFIG_DIR_ENV_VAR in os.environ:
+        if common.CONFIG_DIR_ENV_VAR not in os.environ:
             LOG.error("env variable '$%s' must be set with "
-                      "a config directory (e.g. '~/.config/flow-ldap')",
+                      "a config directory (e.g. '~/.config/semaphor-ldap')",
                       common.CONFIG_DIR_ENV_VAR)
             return False
         config_dir_path = os.environ[common.CONFIG_DIR_ENV_VAR]
@@ -169,9 +196,9 @@ class Server(object):
 
         # Save config
         config = RawConfigParser()
-        config.add_section(common.FLOW_LDAP_SERVER_CONFIG_SECTION)
+        config.add_section(common.AUTOCONNECT_CONFIG_SECTION)
         config.set(
-            common.FLOW_LDAP_SERVER_CONFIG_SECTION,
+            common.AUTOCONNECT_CONFIG_SECTION,
             "uri",
             "http://%s:%s/%s" % (
                 self.server_config["listen_address"],
@@ -180,7 +207,7 @@ class Server(object):
 
         config_file_name = os.path.join(
             config_dir_path,
-            common.FLOW_LDAP_SERVER_CONFIG_FILE_NAME)
+            common.AUTOCONNECT_CONFIG_FILE_NAME)
         with open(config_file_name, "wb") as config_file:
             config.write(config_file)
 
@@ -195,9 +222,8 @@ class Server(object):
             - Flow notification processing (on new thread)
             - CLI HTTP request processing (on main thread)
         """
-
         if not self.initialized:
-            raise Exception("server not initialized, cannot run")
+            raise SemaphorLDAPServerError("server not initialized, cannot run")
 
         self.loop_cron.set()
         self.cron_thread.start()

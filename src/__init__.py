@@ -1,4 +1,4 @@
 """
 __init__.py
-flow-irc-gateway
+semaphor-ldap
 """

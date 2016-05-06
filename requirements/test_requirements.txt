@@ -1,0 +1,3 @@
+-r requirements.txt
+scripttest==1.3
+mock==2.0.0

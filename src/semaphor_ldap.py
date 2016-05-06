@@ -1,9 +1,9 @@
 #! /usr/bin/env python
 
 """
-flow_ldap.py
+semaphor_ldap.py
 
-flow-ldap application main script.
+semaphor-ldap application main script.
 """
 
 import sys
@@ -19,13 +19,14 @@ from server import Server
 import http
 
 
-LOG = logging.getLogger("flow-ldap")
+LOG = logging.getLogger("semaphor-ldap")
 
 
 def run_cli(options):
     """Run the Cli object."""
     cli = Cli(options)
-    cli.run()
+    # For now let's throw Cli.run() to stdout
+    print("%s" % cli.run())
 
 
 # TODO: Mainly needed for semaphor-backend, this will not
@@ -48,9 +49,8 @@ def run_server(options):
 
     try:
         server.run()
-    except:  # Also catches SystemExit
+    finally:  # Also catches SystemExit
         server.cleanup()
-        raise
 
 
 def setup_server_logging(debug):
@@ -95,6 +95,8 @@ def setup_logging(server_mode, debug):
         setup_cli_logging(debug)
     # Do not show 'requests' lib INFO logs
     logging.getLogger("requests").setLevel(logging.WARNING)
+    logging.getLogger("flow").setLevel(
+        logging.DEBUG if debug else logging.INFO)
 
 
 def get_method_doc(method):
@@ -111,19 +113,21 @@ def get_method_doc(method):
         doc_lines = [line.strip() for line in method.__doc__.splitlines()]
         method_doc = doc_lines[0]
         # Get arguments documentation
-        arguments_index = doc_lines.index("Arguments:")
-        for i in range(arguments_index + 1, len(doc_lines)):
-            args_line = doc_lines[i]
-            if args_line:
-                arg_name_desc = args_line.split(":", 1)
-                arg_name = arg_name_desc[0].strip().replace("_", "-")
-                args_doc[arg_name] = arg_name_desc[1].strip()
+        if "Arguments:" in doc_lines:
+            arguments_index = doc_lines.index("Arguments:")
+            for i in range(arguments_index + 1, len(doc_lines)):
+                args_line = doc_lines[i]
+                if args_line:
+                    arg_name_desc = args_line.split(":", 1)
+                    arg_name = arg_name_desc[0].strip().replace("_", "-")
+                    args_doc[arg_name] = arg_name_desc[1].strip()
     return method_doc, args_doc
 
 
 def add_api_methods(subparsers):
     """Adds an argument parser for each API method (add_parser),
     together with arguments (add_argument) for their function arguments.
+    Arguments:
     subparsers : ArgumentParser instance
     """
     api_methods = http.HttpApi.get_apis()
@@ -150,7 +154,7 @@ def parse_options(argv):
     """Command line options parsing."""
 
     parser = argparse.ArgumentParser(
-        description="flow-ldap is a daemon/cli to enable the use of "
+        description="semaphor-ldap is a daemon/cli to enable the use of "
                     "Semaphor with Customer LDAP credentials.")
     parser.add_argument("--version", action="version", version=common.VERSION)
 
@@ -169,7 +173,7 @@ def parse_options(argv):
     server_parser.add_argument(
         "--config",
         metavar="CONFIG",
-        help="Config cfg file with LDAP and Flow settings")
+        help="Config cfg file with LDAP and Semaphor settings")
 
     # CLI config
     cli_parser = subparsers.add_parser("client", help="Client Mode")
@@ -187,7 +191,7 @@ def parse_options(argv):
     if options.server_mode and \
             (not options.config or not os.path.isfile(options.config)):
         LOG.error("Must provide a cfg file, see --help.")
-        sys.exit(0)
+        sys.exit(os.EX_USAGE)
 
     return options
 

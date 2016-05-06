@@ -1,6 +1,6 @@
-# flow-ldap
+# semaphor-ldap
 
-`flow-ldap` is a daemon+client app to enable the use of SpiderOak Semaphor with customer LDAP credentials.
+`semaphor-ldap` is a daemon+client app to enable the use of SpiderOak Semaphor with customer LDAP credentials.
 
 ## Functionality
 
@@ -8,7 +8,7 @@
 - Two modes of operation, `daemon/server` and `client`:
   - The `server` mode starts a daemon in the background, it performs the following operations:
     - LDAP account polling (via LDAP Group/OU listing).
-    - Flow domain account management.
+    - Semaphor domain account management.
     - Provides an HTTP JSON-RPC API.
   - The `client` mode communicates with the daemon server via the HTTP JSON-RPC API.
 
@@ -35,33 +35,33 @@ $ python setup.py install
 # Install remaining requirements 
 $ pip install -r requirements.txt
 ```
-Install `flow-ldap`:
+Install `semaphor-ldap`:
 ```bash
 $ python setup.py install
 ```
 
 ## Usage
 
-`flow-ldap` has two modes of operation: `server` and `client`.
+`semaphor-ldap` has two modes of operation: `server` and `client`.
 
 First (for now) you must set an env variable `$SEMLDAP_CONFIGDIR` for the config directory:
 ```bash
-$ export SEMLDAP_CONFIGDIR=/home/user/.config/flow-ldap
+$ export SEMLDAP_CONFIGDIR=/home/user/.config/semaphor-ldap
 ```
 Run on server mode (this creates and populates the config dir)
 ```bash
-$ flow-ldap --debug server --config config/sample.cfg  
+$ semaphor-ldap --debug server --config config/sample.cfg
 ```
 Run the client (reads necessary config from the config dir)
 ```bash
 # can-auth returns the result of a user auth test against LDAP
-$ flow-ldap --debug client can-auth --username user --password password 
+$ semaphor-ldap --debug client can-auth --username user --password password
 ```
 
 ## Assumptions
 
-- LDAP and Flow configuration provided via config.
-- Loops the provided Flow account:
+- LDAP and Semaphor configuration provided via config.
+- Loops the provided Semaphor account:
     - If the account does not exist, it creates the account + a device (`create_local_account`).
     - If the account exists, but there's no device, it creates a device (`create_local_device`).
     - If the account and device already exist, it will use them (`start_up`). 

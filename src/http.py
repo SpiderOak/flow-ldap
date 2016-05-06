@@ -22,7 +22,9 @@ LOG = logging.getLogger("http")
 
 class HttpApi(object):
     """HTTP API for this application.
-    Public methods defined here are exposed as HTTP API methods.
+    Public methods defined here are exposed as HTTP API methods,
+    and they are also exposed as command line
+    arguments on the client
     These methods must:
       - Contain a docstring with the following format:
       '''One line description

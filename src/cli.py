@@ -17,8 +17,18 @@ import http
 LOG = logging.getLogger("cli")
 
 
+class RequestError(Exception):
+    """Raised when there's an 'error' in the Server response."""
+    pass
+
+
 class Cli(object):
-    """Runs the cli mode for this application."""
+    """Runs the cli mode for this application.
+    The cli mode executes JSON-RPC requests to the server
+    and returns the 'result' to the user.
+    If 'error' is not empty in the response,
+    it raises a RequestError exception.
+    """
 
     def __init__(self, options):
         self.options = options
@@ -36,18 +46,18 @@ class Cli(object):
         config_dir_path = os.environ[common.CONFIG_DIR_ENV_VAR]
         config_file_name = os.path.join(
             config_dir_path,
-            common.FLOW_LDAP_SERVER_CONFIG_FILE_NAME)
+            common.AUTOCONNECT_CONFIG_FILE_NAME)
         cfg = RawConfigParser()
         cfg.read(config_file_name)
         self.server_config = common.raw_config_as_dict(cfg)[
-            common.FLOW_LDAP_SERVER_CONFIG_SECTION]
+            common.AUTOCONNECT_CONFIG_SECTION]
         self.server_uri = self.server_config['uri']
 
     def run_method(self, method, args_dict):
         """Performs an JSON-RPC request to the server.
         Arguments:
         method : string, method name
-        args_dict: dict, positional params
+        args_dict : dict, positional params
         """
         headers = {"content-type": "application/json"}
         payload = {
@@ -56,20 +66,30 @@ class Cli(object):
             "id": self.request_id,
             "jsonrpc": "2.0",
         }
-        LOG.info("request: %s", payload)
+        LOG.debug("request: %s", payload)
         response = requests.post(
             self.server_uri,
             data=json.dumps(payload),
-            headers=headers).json()
-        assert self.request_id == response["id"]
+            headers=headers)
+        response_data = json.loads(response.text, encoding='utf-8')
+        LOG.debug("response: %s", response_data)
+        assert self.request_id == response_data["id"]
         self.request_id += 1
-        LOG.info("response: %s", response)
+        if "error" in response_data:
+            raise RequestError(response_data["error"])
+        return response_data["result"]
 
     def run(self):
-        """Cli command execution."""
+        """Cli command execution.
+        Returns the 'result' section from the JSON-RPC Server response.
+        If there's an 'error' in the Server response,
+        a RequestError is raised.
+        """
+        response = None
         if self.options.api:
             api_name = self.options.api.replace("-", "_")
             args_list = http.HttpApi.get_api_args(api_name)
             args_dict = {key: getattr(self.options, key)
                          for key in args_list}
-            self.run_method(self.options.api, args_dict)
+            response = self.run_method(self.options.api, args_dict)
+        return response
