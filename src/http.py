@@ -15,6 +15,7 @@ from werkzeug.datastructures import Headers
 from jsonrpc import JSONRPCResponseManager, dispatcher
 
 import common
+import app_log
 
 
 LOG = logging.getLogger("http")
@@ -39,9 +40,10 @@ class HttpApi(object):
         converted to string
     """
 
-    def __init__(self, ldap_conn, flow):
-        self.ldap_conn = ldap_conn
-        self.flow = flow
+    def __init__(self, server):
+        self.server = server
+        self.ldap_conn = self.server.ldap_conn
+        self.flow = self.server.flow
 
     def can_auth(self, username, password):
         """Performs LDAP authentication and returns result.
@@ -60,6 +62,16 @@ class HttpApi(object):
         users = ldap_group.userlist()
         LOG.debug(users)
         return users
+
+    def log_dest(self, target):
+        """Configures the server's logging destination.
+        Arguments:
+        target : {syslog,event,file,null}
+        """
+        if target not in app_log.default_log_destination():
+            raise Exception("Logging destination not supported on platform")
+        self.server.configure_logging(target)
+        return "Success"
 
     @classmethod
     def get_apis(cls):
@@ -95,7 +107,7 @@ class HTTPRequestHandler(object):
         """Arguments:
         server : server.Server instance
         """
-        self.http_api = HttpApi(server.ldap_conn, server.flow)
+        self.http_api = HttpApi(server)
         self.register_api_methods()
         url_path = "/" + common.SERVER_JSON_RPC_URL_PATH
         self.url_map = Map([

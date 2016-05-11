@@ -18,6 +18,7 @@ import common
 from flow import Flow
 import ldap_reader
 import http
+import app_log
 
 
 SERVER_CONFIG = "Server"
@@ -38,6 +39,7 @@ class Server(object):
 
     def __init__(self, options):
         self.debug = options.debug
+        self.logging_destination = options.log_dest
         self.initialized = False
         self.flow = None
         self.ldap_conn = None
@@ -46,6 +48,14 @@ class Server(object):
         self.ldap_config = {}  # config_var -> config_value
         self.ldap_vendor_config = {}  # config_var -> config_value
         self.flow_config = {}  # config_var -> config_value
+        self.threads_running = False
+
+        app_log.setup_server_logging(self.debug, self.logging_destination)
+
+        if not options.config or not os.path.isfile(options.config):
+            LOG.error("Missing server *.cfg file, see --help.")
+            return
+
         self.read_config(options.config)
 
         self.init_ldap()
@@ -55,9 +65,11 @@ class Server(object):
         except Flow.FlowError as flow_err:
             if self.flow:
                 self.flow.terminate()
-            raise SemaphorLDAPServerError("Semaphor Init: %s" % str(flow_err))
+            LOG.error("Semaphor init: %s", flow_err)
+            return
 
         self.init_cron()
+
         self.init_http()
 
         self.cron_thread = threading.Thread(target=self.run_cron, args=())
@@ -76,6 +88,11 @@ class Server(object):
         # if sys.platform == "linux2":
         #     LOG.info("going daemon")
         #     self.daemonize()
+
+    def configure_logging(self, destination):
+        """Configure logging"""
+        self.logging_destination = destination
+        app_log.setup_server_logging(self.debug, self.logging_destination)
 
     def read_config(self, config_file):
         """Load config sections from a config file into dicts.
@@ -114,7 +131,11 @@ class Server(object):
         - If the account exists, but there's no device, it creates a device.
         - If the account and device already exist, it will use them.
         """
-        self.flow = Flow()
+        self.flow = Flow(
+            flowappglue="/home/luk/git/flowappglue/flowappglue",
+            db_dir="/home/luk/app2",
+            schema_dir="/home/luk/git/flowapp/schema",
+        )
 
         # An Account + Device may already be local
         # Try to start up first

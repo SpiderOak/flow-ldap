@@ -12,6 +12,7 @@ import json
 
 import common
 import http
+import app_log
 
 
 LOG = logging.getLogger("cli")
@@ -32,11 +33,10 @@ class Cli(object):
 
     def __init__(self, options):
         self.options = options
-        self.supported_methods = [method.replace("_", "-")
-                                  for method, _ in http.HttpApi.get_apis()]
         self.request_id = 0
         self.server_uri = ""
         self.server_config = {}
+        app_log.setup_cli_logging(options.debug)
         self.load_from_server_config()
 
     def load_from_server_config(self):

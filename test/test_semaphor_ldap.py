@@ -128,10 +128,20 @@ class TestClientServer(unittest.TestCase):
         server_options.debug = DEBUG
 
         # Temporarily patch loading config from file
-        with patch.object(ConfigParser.RawConfigParser, "read"), \
-            patch.object(src.common,
-                         "raw_config_as_dict",
-                         return_value=server_config_map):
+        with patch.object(
+                ConfigParser.RawConfigParser,
+                "read"
+            ), \
+            patch.object(
+                src.common,
+                "raw_config_as_dict",
+                return_value=server_config_map
+        ), \
+            patch.object(
+                os.path,
+                "isfile",
+                return_value=True
+        ):
             server = Server(server_options)
 
         # Mock LDAPConnection 'can_auth' response
@@ -187,6 +197,22 @@ class TestClientServer(unittest.TestCase):
             ast.literal_eval(
                 result.stdout),
             self.mock_group_users)
+
+    def test_log_dest(self):
+        """Test the client 'log-dest' option"""
+        cli_options = MagicMock()
+        cli_options.debug = DEBUG
+        cli_options.api = "log-dest"
+        cli_options.target = "file"
+        cli = Cli(cli_options)
+        self.assertEqual(cli.run(), "Success")
+
+        # Test the same operation but from command line
+        result = ENV.run(
+            script="%s client log-dest --target file" % self.main_script,
+        )
+        self.assertEqual(result.returncode, os.EX_OK)
+        self.assertEqual(result.stdout, "Success\n")
 
     def tearDown(self):
         """Closes patches and terminates server started on setUp."""
