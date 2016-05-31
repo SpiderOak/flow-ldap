@@ -26,6 +26,8 @@ from mock import (
     MagicMock,
 )
 
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 from src.server import Server
 from src.cli import Cli
 import src.common
