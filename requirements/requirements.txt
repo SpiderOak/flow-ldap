@@ -1,4 +1,4 @@
-flow-python==0.1
+flow-python>=0.2
 ldap-reader==0.1
 requests==2.9.1
 schedule==0.3.2

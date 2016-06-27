@@ -13,11 +13,13 @@ import argparse
 import logging
 import signal
 
-import common
-from cli import Cli
-from server import Server
-import app_log
-import api_gen
+from . import (
+    common,
+    cli,
+    server,
+    app_log,
+    api_gen,
+)
 
 
 LOG = logging.getLogger("semaphor-ldap")
@@ -25,9 +27,9 @@ LOG = logging.getLogger("semaphor-ldap")
 
 def run_cli(options):
     """Run the Cli object."""
-    cli = Cli(options)
+    cli_obj = cli.Cli(options)
     # For now let's throw Cli.run() to stdout
-    print("%s" % cli.run())
+    print("%s" % cli_obj.run())
 
 
 def signal_handler(sig, frame):
@@ -43,11 +45,11 @@ signal.signal(signal.SIGTERM, signal_handler)
 
 def run_server(options):
     """Run the Server object."""
-    server = Server(options)
+    server_obj = server.Server(options)
     try:
-        server.run()
+        server_obj.run()
     finally:  # Also catches SystemExit
-        server.cleanup()
+        server_obj.cleanup()
 
 
 def parse_options(argv):
@@ -73,12 +75,14 @@ def parse_options(argv):
     server_parser.add_argument(
         "--config",
         metavar="CONFIG",
-        help="Config cfg file with LDAP and Semaphor settings")
+        help="Config cfg file with LDAP and Semaphor settings",
+    )
     server_parser.add_argument(
         "--log-dest",
         metavar="DEST",
         help="Application logging destination {syslog,event,file,null}",
-        default=app_log.default_log_destination()[0])
+        default=app_log.supported_log_destinations()[0],
+    )
 
     # CLI config
     cli_parser = subparsers.add_parser("client", help="Client Mode")
@@ -91,7 +95,7 @@ def parse_options(argv):
     options = parser.parse_args(argv[1:])
 
     if options.server_mode and \
-            options.log_dest not in app_log.default_log_destination():
+            options.log_dest not in app_log.supported_log_destinations():
         print("Logging destination '%s' not supported on this platform."
               % options.log_dest)
         sys.exit(os.EX_USAGE)

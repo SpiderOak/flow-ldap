@@ -6,13 +6,16 @@ CLI mode source code.
 
 import os
 from ConfigParser import RawConfigParser
-import requests
 import logging
 import json
 
-import common
-import http
-import app_log
+import requests
+
+from . import (
+    common,
+    http,
+    app_log,
+)
 
 
 LOG = logging.getLogger("cli")

@@ -14,8 +14,10 @@ from werkzeug.exceptions import HTTPException
 from werkzeug.datastructures import Headers
 from jsonrpc import JSONRPCResponseManager, dispatcher
 
-import common
-import app_log
+from . import (
+    common,
+    app_log,
+)
 
 
 LOG = logging.getLogger("http")
@@ -68,7 +70,7 @@ class HttpApi(object):
         Arguments:
         target : {syslog,event,file,null}
         """
-        if target not in app_log.default_log_destination():
+        if target not in app_log.supported_log_destinations():
             raise Exception("Logging destination not supported on platform")
         self.server.configure_logging(target)
         return "Success"

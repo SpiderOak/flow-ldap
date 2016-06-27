@@ -10,12 +10,16 @@ import time
 import logging
 import logging.handlers
 
-import common
-import console_handler
+from . import (
+    common,
+    console_handler,
+)
 
 
-def default_log_destination():
-    """Returns the default logging destination for the platform."""
+def supported_log_destinations():
+    """Returns a list with the supported logging
+    destinations for the platform.
+    """
     if sys.platform == "linux2":
         return ["syslog", "file"]
     elif sys.platform == "win32":
@@ -99,16 +103,18 @@ def setup_server_logging(debug, destination):
     """Setup logging configuration for the Server mode."""
     setup_common_logging(debug)
 
-    logging_handler = logging.NullHandler()
     if sys.platform == "linux2" and destination == "syslog":
         logging_handler = configured_syslog_handler()
     elif sys.platform == "win32" and destination == "event":
         logging_handler = configured_eventlog_handler()
     elif destination == "file":
         logging_handler = configured_file_handler()
+    else:
+        logging_handler = logging.NullHandler()
 
     logging.getLogger("").addHandler(logging_handler)
 
+    # We log to stdout too
     _console_handler = configured_console_handler()
     logging.getLogger("").addHandler(_console_handler)
 

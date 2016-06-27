@@ -10,15 +10,16 @@ from ConfigParser import RawConfigParser
 import logging
 import time
 import threading
-import platform
 
 import schedule
 
-import common
 from flow import Flow
 import ldap_reader
-import http
-import app_log
+from . import (
+    common,
+    http,
+    app_log,
+)
 
 
 SERVER_CONFIG = "Server"
@@ -51,6 +52,7 @@ class Server(object):
         self.threads_running = False
 
         app_log.setup_server_logging(self.debug, self.logging_destination)
+        LOG.debug("initializing semaphor-ldap server")
 
         if not options.config or not os.path.isfile(options.config):
             LOG.error("Missing server *.cfg file, see --help.")
@@ -113,11 +115,13 @@ class Server(object):
 
     def init_cron(self):
         """Initializes the cron configuration for this application."""
+        LOG.debug("initializing cron")
         minutes = int(self.ldap_config["poll_group_minutes"])
         schedule.every(minutes).minutes.do(self.group_userlist)
 
     def init_ldap(self):
         """Initializes LDAP from config values."""
+        LOG.debug("initializing ldap")
         self.ldap_conn = ldap_reader.LdapConnection(
             self.ldap_config["uri"],
             self.ldap_config["base_dn"],
@@ -127,14 +131,22 @@ class Server(object):
 
     def init_flow(self):
         """Initializes Flow instance from config info.
-        - If the account does not exist, it creates the account + a device.
-        - If the account exists, but there's no device, it creates a device.
         - If the account and device already exist, it will use them.
+        - If the account exists, but there's no device, it creates a device.
+        - If the account does not exist, it creates the account + a device.
         """
+        LOG.debug("initializing flow")
+        flowappglue = self.flow_config["flowappglue"] \
+            if "flowappglue" in self.flow_config else ""
+        schema_dir = self.flow_config["schema_dir"] \
+            if "schema_dir" in self.flow_config else ""
         self.flow = Flow(
-            flowappglue="/home/luk/git/flowappglue/flowappglue",
-            db_dir="/home/luk/app2",
-            schema_dir="/home/luk/git/flowapp/schema",
+            flowappglue=flowappglue,
+            schema_dir=schema_dir,
+            host=self.flow_config["flow_service_host"],
+            port=self.flow_config["flow_service_port"],
+            use_tls=self.flow_config["flow_service_use_tls"],
+            server_uri=self.flow_config["server_uri"],
         )
 
         # An Account + Device may already be local
@@ -142,7 +154,6 @@ class Server(object):
         try:
             self.flow.start_up(
                 username=self.flow_config["username"],
-                server_uri=self.flow_config["server_uri"],
             )
             LOG.debug(
                 "local account '%s' started",
@@ -151,16 +162,13 @@ class Server(object):
         except Flow.FlowError as start_up_err:
             LOG.debug("start_up failed: '%s'", str(start_up_err))
 
+        # TODO: use create_dm_device() when available
         # Account may already exist, but not locally.
         # Try to create new device
         try:
             self.flow.create_device(
                 username=self.flow_config["username"],
                 password=self.flow_config["password"],
-                server_uri=self.flow_config["server_uri"],
-                device_name=self.flow_config["device_name"],
-                platform=sys.platform,
-                os_release=platform.release(),
             )
             LOG.info(
                 "local Device '%s' for '%s' created",
@@ -174,14 +182,11 @@ class Server(object):
 
         # Account may not exist.
         # Try to create Account + Device
-        self.flow.create_account(
+        # for the Directory Management Account
+        self.flow.create_dm_account(
             username=self.flow_config["username"],
             password=self.flow_config["password"],
-            server_uri=self.flow_config["server_uri"],
-            device_name=self.flow_config["device_name"],
-            phone_number=self.flow_config["phone_number"],
-            platform=sys.platform,
-            os_release=platform.release(),
+            dmk=self.flow_config["directory_management_key"],
         )
         LOG.info(
             "account '%s' with device '%s' created",

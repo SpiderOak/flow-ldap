@@ -4,7 +4,9 @@ api_gen.py
 Utilities for automatic API generation.
 """
 
-import http
+from . import (
+    http,
+)
 
 
 def get_method_doc(method):
