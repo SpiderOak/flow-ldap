@@ -4,20 +4,25 @@ http.py
 HTTP handling for server and CLI communication
 """
 
+import os
 import logging
 import inspect
+import threading
+import json
+import hmac
+import binascii
 
 from werkzeug.wrappers import Request, Response
-from werkzeug.serving import run_simple
+from werkzeug.serving import ThreadedWSGIServer
 from werkzeug.routing import Map, Rule
 from werkzeug.exceptions import HTTPException
 from werkzeug.datastructures import Headers
 from jsonrpc import JSONRPCResponseManager, dispatcher
+from jsonrpc.jsonrpc2 import JSONRPC20Response
+from jsonrpc.exceptions import JSONRPCInvalidRequest
 
-from . import (
-    common,
-    app_log,
-)
+import utils
+from log import app_log
 
 
 LOG = logging.getLogger("http")
@@ -42,10 +47,11 @@ class HttpApi(object):
         converted to string
     """
 
-    def __init__(self, server):
+    def __init__(self, server, http_server):
         self.server = server
-        self.ldap_conn = self.server.ldap_conn
+        self.ldap_factory = self.server.ldap_factory
         self.flow = self.server.flow
+        self.http_server = http_server
 
     def can_auth(self, username, password):
         """Performs LDAP authentication and returns result.
@@ -53,16 +59,22 @@ class HttpApi(object):
         username : Account username.
         password : Account password.
         """
-        return self.ldap_conn.can_auth(username, password)
+        ldap_conn = self.ldap_factory.get_connection()
+        return ldap_conn.can_auth(username, password)
+
+    def stop_server(self):
+        """Stops the semaphor-ldap server."""
+        self.http_server.keep_running.clear()
+        return "Terminating Server"
 
     def group_userlist(self, group_dn):
         """Returns the userlist for a given LDAP Group/OU.
         Arguments:
         group_dn : LDAP Group/OU Distinguished Name.
         """
-        ldap_group = self.ldap_conn.get_group(group_dn)
+        ldap_conn = self.ldap_factory.get_connection()
+        ldap_group = ldap_conn.get_group(group_dn)
         users = ldap_group.userlist()
-        LOG.debug(users)
         return users
 
     def log_dest(self, target):
@@ -105,13 +117,14 @@ class HttpApi(object):
 class HTTPRequestHandler(object):
     """Handles/Dispatches HTTP requests."""
 
-    def __init__(self, server):
+    def __init__(self, server, http_server):
         """Arguments:
         server : server.Server instance
         """
-        self.http_api = HttpApi(server)
+        self.http_api = HttpApi(server, http_server)
+        self.auth_token = http_server.auth_token
         self.register_api_methods()
-        url_path = "/" + common.SERVER_JSON_RPC_URL_PATH
+        url_path = "/" + utils.SERVER_JSON_RPC_URL_PATH
         self.url_map = Map([
             Rule(url_path, endpoint="rpc_handler", methods=["POST"]),
             Rule(url_path, endpoint="preflight", methods=["OPTIONS"])
@@ -132,14 +145,19 @@ class HTTPRequestHandler(object):
         headers.add("Access-Control-Allow-Credentials", "true")
         return Response(response="", headers=headers)
 
-    @staticmethod
-    def rpc_handler(request):
+    def rpc_handler(self, request):
         """Method to dispatch JSON-RPC requests.
         Arguments:
         request : werkzeug.wrappers.Request instance.
         """
+        auth_token = request.environ.get("HTTP_AUTH_TOKEN")
+        if not auth_token or \
+           not hmac.compare_digest(auth_token, self.auth_token):
+            return Response("Invalid Request", status=404)
         rpc_response = JSONRPCResponseManager.handle(
-            request.data, dispatcher)
+            request.data, 
+            dispatcher,
+        )
         return Response(rpc_response.json, mimetype="application/json")
 
     def register_api_methods(self):
@@ -169,10 +187,21 @@ class HTTPRequestHandler(object):
 class HTTPServer(object):
     """HTTP server container object. Runs the HTTP server loop."""
 
+    @staticmethod
+    def gen_auth_token():
+        return binascii.hexlify(os.urandom(16))
+
     def __init__(self, server):
         self.server = server
+        self.keep_running = threading.Event()
+        self.keep_running.set()
+        self.auth_token = self.gen_auth_token()
 
     def run(self):
         """Run this HTTP server."""
-        app = HTTPRequestHandler(self.server)
-        run_simple('localhost', 8080, app)
+        app = HTTPRequestHandler(self.server, self)
+        wsgi_server = ThreadedWSGIServer('localhost', 8080, app)
+        wsgi_server.timeout = 1
+        while self.keep_running.is_set():
+            wsgi_server.handle_request()
+        wsgi_server.server_close()

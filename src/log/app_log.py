@@ -10,10 +10,9 @@ import time
 import logging
 import logging.handlers
 
-from . import (
-    common,
-    console_handler,
-)
+import src.utils
+import console_handler
+from flow_log_channel_handler import FlowLogChannelHandler
 
 
 def supported_log_destinations():
@@ -55,15 +54,9 @@ def configured_eventlog_handler():
 
 def configured_file_handler():
     """Configures the builtin logging 'FileHandler'."""
-    if common.CONFIG_DIR_ENV_VAR not in os.environ:
-        print(
-            "Error: $%s environment variable must be set." %
-            common.CONFIG_DIR_ENV_VAR
-        )
-        sys.exit(os.EX_USAGE)
-
+    config_dir_path = src.utils.get_config_path()
     log_file_name = os.path.join(
-        os.environ[common.CONFIG_DIR_ENV_VAR],
+        config_dir_path,
         time.strftime("semaphor_ldap_%Y%m%d-%H%M%S.log"),
     )
     file_handler = logging.handlers.RotatingFileHandler(
@@ -124,3 +117,21 @@ def setup_cli_logging(debug):
     setup_common_logging(debug)
     _console_handler = configured_console_handler(detailed=False)
     logging.getLogger("").addHandler(_console_handler)
+
+
+def configure_flow_log(flow_remote_logger):
+    """Configure logging errors into the log channel."""
+    flow_log_handler = FlowLogChannelHandler(flow_remote_logger)
+    class OnlyError(logging.Filter):
+        def filter(self, record):
+            return record.levelname == logging.ERROR
+    class NotFlow(logging.Filter):
+        def filter(self, record):
+            return record.name != "flow"
+    flow_log_handler.addFilter(OnlyError()) 
+    flow_log_handler.addFilter(NotFlow()) 
+    channel_formatter = logging.Formatter(
+        "%(asctime)s %(name)s %(message)s",
+    )
+    flow_log_handler.setFormatter(channel_formatter)
+    logging.getLogger("").addHandler(flow_log_handler)

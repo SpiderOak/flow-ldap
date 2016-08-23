@@ -1,8 +1,9 @@
+import src.utils
 from setuptools import setup
 
 setup(name = "semaphor-ldap",
-      version = "0.1",
-      packages = [ 'src' ],
+      version = src.utils.VERSION,
+      packages = [ "src", "src/log", "src/db", "src/sync", "src/flowpkg", "src/flowpkg/handler" ],
       entry_points = {
         "console_scripts": [
         "semaphor-ldap=src.semaphor_ldap:main",

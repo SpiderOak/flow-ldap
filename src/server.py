@@ -9,23 +9,28 @@ import os
 from ConfigParser import RawConfigParser
 import logging
 import time
-import threading
-
-import schedule
 
 from flow import Flow
-import ldap_reader
-from . import (
-    common,
-    http,
-    app_log,
+
+import utils
+import http
+from log import app_log
+import db.local_db
+import db.backup
+import sync.ldap_sync
+import cron
+import server_config
+from ldap_factory import LDAPFactory
+from flowpkg import flow_setup, flow_util
+from flowpkg.flow_notify import FlowNotify
+from flowpkg.handler import (
+    LDAPBindRequestHandler,
+    ChannelMemberEventHandler,
+    UploadHandler,
+    TeamMemberEventHandler,
 )
+from log.flow_log_channel_handler import FlowRemoteLogger
 
-
-SERVER_CONFIG = "Server"
-LDAP_MAIN_CONFIG_SECTION = "LDAP"
-LDAP_VENDOR_CONFIG_SECTION = "LDAP Vendor"
-SEMAPHOR_CONFIG_SECTION = "Semaphor"
 
 LOG = logging.getLogger("server")
 
@@ -42,48 +47,57 @@ class Server(object):
         self.debug = options.debug
         self.logging_destination = options.log_dest
         self.initialized = False
+        self.config = None
         self.flow = None
-        self.ldap_conn = None
+        self.flow_remote_logger = None
+        self.ldap = None
+        self.db = None
+        self.cron = None
+        self.ldap_sync = None
         self.http_server = None
-        self.server_config = {}  # config_var -> config_value
-        self.ldap_config = {}  # config_var -> config_value
-        self.ldap_vendor_config = {}  # config_var -> config_value
-        self.flow_config = {}  # config_var -> config_value
         self.threads_running = False
+        self.flow_notify = None
+        self.ldap_bind_request_handler = None
+        self.cme_handler = None
+        self.upload_handler = None
+        self.ldap_factory = None
+        self.flow_username = ""
+        self.account_id = ""
+        self.ldap_team_id = ""
+        self.backup_cid = ""
+        self.log_cid = ""
+        self.config_dir_path = ""
+        self.threads_running = False
+
+        if not self.set_config_dir():
+            return
 
         app_log.setup_server_logging(self.debug, self.logging_destination)
         LOG.debug("initializing semaphor-ldap server")
+        LOG.debug("config directory: '%s'", self.config_dir_path)
 
         if not options.config or not os.path.isfile(options.config):
             LOG.error("Missing server *.cfg file, see --help.")
             return
 
-        self.read_config(options.config)
+        self.config = server_config.ServerConfig(options.config)
 
+        self.init_flow()
+        self.init_flow_log_channel()
         self.init_ldap()
-
-        try:
-            self.init_flow()
-        except Flow.FlowError as flow_err:
-            if self.flow:
-                self.flow.terminate()
-            LOG.error("Semaphor init: %s", flow_err)
-            return
-
         self.init_cron()
-
+        self.init_db()
+        self.init_ldap_sync()
+        self.init_config_sync()
+        self.init_flow_notify()
+        self.init_scan_prescribed_channels()
+        self.init_admins_on_channels()
+        self.init_notif_handlers()
         self.init_http()
 
-        self.cron_thread = threading.Thread(target=self.run_cron, args=())
-        self.loop_cron = threading.Event()
-        self.flow_thread = threading.Thread(target=self.run_flow, args=())
-        self.loop_flow = threading.Event()
-        self.threads_running = False
-
-        config_written = self.write_auto_connect_config()
-        if config_written:
-            self.initialized = True
-
+        self.write_auto_connect_config()
+        
+        self.initialized = True
         LOG.info("server initialized")
 
         # Commented out for now
@@ -91,191 +105,208 @@ class Server(object):
         #     LOG.info("going daemon")
         #     self.daemonize()
 
+    def set_config_dir(self):
+        """Set semaphor-ldap config directory."""
+        self.config_dir_path = utils.get_config_path()
+        if os.path.exists(self.config_dir_path):
+            if not os.path.isdir(self.config_dir_path):
+                LOG.error("'%s' exists and is not a dir")
+                return False
+        else:  # does not exist, create it
+            os.mkdir(self.config_dir_path)
+        return True
+
     def configure_logging(self, destination):
         """Configure logging"""
         self.logging_destination = destination
         app_log.setup_server_logging(self.debug, self.logging_destination)
 
-    def read_config(self, config_file):
-        """Load config sections from a config file into dicts.
-        Arguments:
-        config_file : string, file name
-        """
-        cfg = RawConfigParser()
-        cfg.read(config_file)
-        config_dict = common.raw_config_as_dict(cfg)
-        self.ldap_config = config_dict[
-            LDAP_MAIN_CONFIG_SECTION]
-        self.ldap_vendor_config = config_dict[
-            LDAP_VENDOR_CONFIG_SECTION]
-        self.flow_config = config_dict[
-            SEMAPHOR_CONFIG_SECTION]
-        self.server_config = config_dict[
-            SERVER_CONFIG]
+    def run_backup(self):
+        LOG.debug("running db backup")
+        db.backup.run(
+            self.db,
+            self.flow,
+            self.ldap_team_id,
+            self.backup_cid,
+        )
 
-    def init_cron(self):
-        """Initializes the cron configuration for this application."""
-        LOG.debug("initializing cron")
-        minutes = int(self.ldap_config["poll_group_minutes"])
-        schedule.every(minutes).minutes.do(self.group_userlist)
+    def set_db_backup_from_config(self):
+        minutes = int(self.config.get("db-backup-minutes"))
+        self.cron.update_task_frequency(minutes, self.run_backup)
+
+    def schedule_db_back_up(self):
+        """Schedules the DB backup process."""
+        self.set_db_backup_from_config()
+        # Whenever "db-backup-minutes" variable is updated
+        # set_db_backup_from_config will be executed
+        self.config.register_trigger_for_var(
+            "db-backup-minutes",
+            self.set_db_backup_from_config,
+        )
+
+    def init_db(self):
+        """Initializes the db object"""
+        LOG.debug("initializing db")
+        schema_file_name = self.config.get("local-db-schema")
+        local_db_name = utils.local_db_path(
+            self.flow_username,
+            self.config_dir_path, 
+        )
+        self.db = db.local_db.LocalDB(
+            schema_file_name, 
+            local_db_name, 
+        )
+        self.schedule_db_back_up()
 
     def init_ldap(self):
         """Initializes LDAP from config values."""
         LOG.debug("initializing ldap")
-        self.ldap_conn = ldap_reader.LdapConnection(
-            self.ldap_config["uri"],
-            self.ldap_config["base_dn"],
-            self.ldap_config["admin_user"],
-            self.ldap_config["admin_pw"],
-            self.ldap_vendor_config)
+        self.ldap_factory = LDAPFactory(self.config)
+        # Make a dummy connection to test LDAP config
+        self.ldap_factory.get_connection()
+
+    def init_cron(self):
+        """Initializes the cron process."""
+        LOG.debug("initializing cron")
+        self.cron = cron.Cron()
+
+    def init_admins_on_channels(self):
+        """Performs the following actions:
+        1. Add config admins on LDAP team to log channel.
+        """
+        flow_util.add_admins_to_channel(
+            self.flow, 
+            self.ldap_team_id,
+            self.log_cid,
+        )
+
+    def set_ldap_sync_from_config(self):
+        """Sets the LDAP sync interval from config value."""
+        minutes = int(self.config.get("ldap-sync-minutes"))
+        self.cron.update_task_frequency(minutes, self.ldap_sync.run)
+
+    def init_ldap_sync(self):
+        """Initializes the ldap sync process and schedules it."""
+        LOG.debug("initializing ldap sync scheduling")
+        self.ldap_sync = sync.ldap_sync.LDAPSync(self)
+        self.set_ldap_sync_from_config()
+        # Whenever "ldap-sync-minutes" variable is updated
+        # set_ldap_sync_from_config will be executed
+        self.config.register_trigger_for_var(
+            "ldap-sync-minutes",
+            self.set_ldap_sync_from_config,
+        )
+
+    def init_config_sync(self):
+        """Initializes the config sync process."""
+        LOG.debug("initializing sync config")
+        self.cron.update_task_frequency(
+            utils.SYNC_CONFIG_FREQ_MINUTES, 
+            self.config.sync_config,
+        )
+
+    def init_flow_notify(self):
+        LOG.debug("initializing flow notification system")
+        self.flow_notify = FlowNotify(self)
+
+    def init_scan_prescribed_channels(self):
+        """Performs a scan over the prescribed channels
+        and adds remaining accounts to them.
+        """
+        LOG.debug("init scan prescribed channels")
+        prescribed_channel_ids = flow_util.get_prescribed_cids(
+            self.flow, 
+            self.ldap_team_id, 
+        )
+        if prescribed_channel_ids:
+            flow_util.rescan_accounts_on_channels(
+                self.flow, 
+                self.db, 
+                self.ldap_team_id,
+                prescribed_channel_ids,
+            )
 
     def init_flow(self):
-        """Initializes Flow instance from config info.
-        - If the account and device already exist, it will use them.
-        - If the account exists, but there's no device, it creates a device.
-        - If the account does not exist, it creates the account + a device.
-        """
+        """Initializes the flow service."""
         LOG.debug("initializing flow")
-        flowappglue = self.flow_config["flowappglue"] \
-            if "flowappglue" in self.flow_config else ""
-        schema_dir = self.flow_config["schema_dir"] \
-            if "schema_dir" in self.flow_config else ""
-        self.flow = Flow(
-            flowappglue=flowappglue,
-            schema_dir=schema_dir,
-            host=self.flow_config["flow_service_host"],
-            port=self.flow_config["flow_service_port"],
-            use_tls=self.flow_config["flow_service_use_tls"],
-            server_uri=self.flow_config["server_uri"],
-        )
-
-        # An Account + Device may already be local
-        # Try to start up first
         try:
-            self.flow.start_up(
-                username=self.flow_config["username"],
-            )
-            LOG.debug(
-                "local account '%s' started",
-                self.flow_config["username"])
-            return
-        except Flow.FlowError as start_up_err:
-            LOG.debug("start_up failed: '%s'", str(start_up_err))
+            self.flow, setup_data = flow_setup.run(self.config)
+            self.account_id = self.flow.account_id()
+            self.flow_username = self.flow.identifier()["username"]
+            self.ldap_team_id = setup_data["ldap_team_id"]
+            self.backup_cid = setup_data["backup_cid"]
+            self.log_cid = setup_data["log_cid"]
+        except Exception as exception:
+            raise SemaphorLDAPServerError(exception)
 
-        # TODO: use create_dm_device() when available
-        # Account may already exist, but not locally.
-        # Try to create new device
-        try:
-            self.flow.create_device(
-                username=self.flow_config["username"],
-                password=self.flow_config["password"],
-            )
-            LOG.info(
-                "local Device '%s' for '%s' created",
-                self.flow_config["device_name"],
-                self.flow_config["username"])
-            return
-        except Flow.FlowError as create_device_err:
-            LOG.debug(
-                "create_device failed: '%s'",
-                str(create_device_err))
-
-        # Account may not exist.
-        # Try to create Account + Device
-        # for the Directory Management Account
-        self.flow.create_dm_account(
-            username=self.flow_config["username"],
-            password=self.flow_config["password"],
-            dmk=self.flow_config["directory_management_key"],
-        )
-        LOG.info(
-            "account '%s' with device '%s' created",
-            self.flow_config["username"],
-            self.flow_config["device_name"])
+    def init_flow_log_channel(self):
+        """Initializes the logging of errors to a semaphor channel."""
+        LOG.debug("initializing error logging to flow channel")
+        self.flow_remote_logger = FlowRemoteLogger(self.flow, self.log_cid)        
+        app_log.configure_flow_log(self.flow_remote_logger)
 
     def init_http(self):
         """Initializes the HTTPServer instance."""
         self.http_server = http.HTTPServer(self)
 
-    def group_userlist(self):
-        """Performs the LDAP account listing on the config provided group."""
-        group_dn = self.ldap_config["group_dn"]
-        ldap_group = self.ldap_conn.get_group(group_dn)
-        users = ldap_group.userlist()
-        LOG.debug(users)
-        return users
+    def init_notif_handlers(self):
+        self.ldap_bind_request_handler = LDAPBindRequestHandler(self)
+        self.cme_handler = ChannelMemberEventHandler(self)
+        self.upload_handler = UploadHandler()
+        self.tme_handler = TeamMemberEventHandler(self)
+        self.flow_notify.add_handler(self.ldap_bind_request_handler)
+        self.flow_notify.add_handler(self.cme_handler)
+        self.flow_notify.add_handler(self.upload_handler)
+        self.flow_notify.add_handler(self.tme_handler)
 
     def write_auto_connect_config(self):
-        """Write config for CLI mode to $SEMLDAP_CONFIGDIR."""
-        if common.CONFIG_DIR_ENV_VAR not in os.environ:
-            LOG.error("env variable '$%s' must be set with "
-                      "a config directory (e.g. '~/.config/semaphor-ldap')",
-                      common.CONFIG_DIR_ENV_VAR)
-            return False
-        config_dir_path = os.environ[common.CONFIG_DIR_ENV_VAR]
-        if os.path.exists(config_dir_path):
-            if not os.path.isdir(config_dir_path):
-                LOG.error("'%s' exists and is not a dir")
-                return False
-        else:  # does not exist, create it
-            os.mkdir(config_dir_path)
-
+        """Write config for CLI mode to the config directory."""
         # Save config
         config = RawConfigParser()
-        config.add_section(common.AUTOCONNECT_CONFIG_SECTION)
+        config.add_section(utils.AUTOCONNECT_CONFIG_SECTION)
         config.set(
-            common.AUTOCONNECT_CONFIG_SECTION,
+            utils.AUTOCONNECT_CONFIG_SECTION,
             "uri",
             "http://%s:%s/%s" % (
-                self.server_config["listen_address"],
-                self.server_config["listen_port"],
-                common.SERVER_JSON_RPC_URL_PATH))
-
+                self.config.get("listen-address"),
+                self.config.get("listen-port"),
+                utils.SERVER_JSON_RPC_URL_PATH,
+            ),
+        )
+        config.set(
+            utils.AUTOCONNECT_CONFIG_SECTION,
+            "auth-token",
+            self.http_server.auth_token,
+        )
         config_file_name = os.path.join(
-            config_dir_path,
-            common.AUTOCONNECT_CONFIG_FILE_NAME)
+            self.config_dir_path,
+            utils.AUTOCONNECT_CONFIG_FILE_NAME,
+        )
         with open(config_file_name, "wb") as config_file:
             config.write(config_file)
-
         LOG.info("config file created: '%s'", config_file_name)
-
-        return True
 
     def run(self):
         """Server main loop.
         It performs the following actions:
-            - LDAP periodic poll (on new thread)
-            - Flow notification processing (on new thread)
-            - CLI HTTP request processing (on main thread)
+            - Starts the LDAP sync thread
+            - Starts the Bind Request Handler thread.
+            - Starts the CLI HTTP request processing (on main thread)
         """
         if not self.initialized:
             raise SemaphorLDAPServerError("server not initialized, cannot run")
 
-        self.loop_cron.set()
-        self.cron_thread.start()
+        # Run an initial db sync
+        self.ldap_sync.run()
 
-        self.loop_flow.set()
-        self.flow_thread.start()
-
+        # Start cron thread, auth listener thread and remote logger thread
+        self.cron.start()
+        self.flow_notify.start()
+        self.flow_remote_logger.start()
         self.threads_running = True
 
         # Run HTTP server on main thread
         self.run_http()
-
-    def run_cron(self):
-        """Loops the cron schedule."""
-        LOG.debug("cron thread started")
-        while self.loop_cron.is_set():
-            schedule.run_pending()
-            time.sleep(0.1)
-        LOG.debug("cron thread finished")
-
-    def run_flow(self):
-        """Loops Flow notification processing."""
-        LOG.debug("flow thread started")
-        while self.loop_flow.is_set():
-            self.flow.process_one_notification(timeout_secs=0.05)
-        LOG.debug("flow thread finished")
 
     def run_http(self):
         """Runs the HTTP server."""
@@ -285,14 +316,17 @@ class Server(object):
 
     def cleanup(self):
         """Server cleanup. Must be called before the program exits."""
-        LOG.debug('server cleanup')
-
+        LOG.debug('server cleanup start')
         if self.threads_running:
-            self.loop_cron.clear()
-            self.loop_flow.clear()
-
+            self.cron.stop()
+            self.flow_notify.stop()
+            self.flow_remote_logger.stop()
+            self.cron.join()
+            self.flow_notify.join()
+            self.flow_remote_logger.join()
         if self.flow:
             self.flow.terminate()
+        LOG.debug('server cleanup done')
 
     @staticmethod
     def daemonize():

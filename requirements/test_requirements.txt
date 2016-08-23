@@ -1,3 +1,6 @@
 -r requirements.txt
 scripttest==1.3
 mock==2.0.0
+psycopg2==2.6.1
+ldaptor==16.0.1
+service-identity==16.0.0

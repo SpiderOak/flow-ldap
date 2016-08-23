@@ -13,13 +13,9 @@ import argparse
 import logging
 import signal
 
-from . import (
-    common,
-    cli,
-    server,
-    app_log,
-    api_gen,
-)
+import utils
+import cli, server, api_gen
+from log import app_log
 
 
 LOG = logging.getLogger("semaphor-ldap")
@@ -39,26 +35,31 @@ def signal_handler(sig, frame):
     """
     sys.exit(0)
 
+
 signal.signal(signal.SIGINT, signal_handler)
 signal.signal(signal.SIGTERM, signal_handler)
 
 
 def run_server(options):
     """Run the Server object."""
-    server_obj = server.Server(options)
+    server_obj = None
     try:
+        server_obj = server.Server(options)
         server_obj.run()
+    except Exception as exception:
+        LOG.error("server execution failed with '%s'", exception)
     finally:  # Also catches SystemExit
-        server_obj.cleanup()
+        if server_obj:
+            server_obj.cleanup()
 
 
 def parse_options(argv):
     """Command line options parsing."""
 
     parser = argparse.ArgumentParser(
-        description="semaphor-ldap is a daemon/cli to enable the use of "
-                    "Semaphor with Customer LDAP credentials.")
-    parser.add_argument("--version", action="version", version=common.VERSION)
+        description="%s is a daemon/cli to enable the use of "
+                    "Semaphor with Customer LDAP credentials." % os.path.basename(sys.argv[0]))
+    parser.add_argument("--version", action="version", version=utils.VERSION)
 
     # Generic config
     parser.add_argument(

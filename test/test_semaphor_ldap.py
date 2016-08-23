@@ -30,7 +30,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from src.server import Server
 from src.cli import Cli
-import src.common
+import src.utils
 
 
 DEBUG = False
@@ -135,7 +135,7 @@ class TestClientServer(unittest.TestCase):
                 "read"
             ), \
             patch.object(
-                src.common,
+                src.util,
                 "raw_config_as_dict",
                 return_value=server_config_map
         ), \
