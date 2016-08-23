@@ -10,7 +10,7 @@ import time
 import logging
 import logging.handlers
 
-import src.utils
+import src.app_platform
 import console_handler
 from flow_log_channel_handler import FlowLogChannelHandler
 
@@ -54,7 +54,7 @@ def configured_eventlog_handler():
 
 def configured_file_handler():
     """Configures the builtin logging 'FileHandler'."""
-    config_dir_path = src.utils.get_config_path()
+    config_dir_path = src.app_platform.get_config_path()
     log_file_name = os.path.join(
         config_dir_path,
         time.strftime("semaphor_ldap_%Y%m%d-%H%M%S.log"),

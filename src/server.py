@@ -13,6 +13,7 @@ import time
 from flow import Flow
 
 import utils
+import app_platform
 import http
 from log import app_log
 import db.local_db
@@ -76,9 +77,10 @@ class Server(object):
         LOG.debug("initializing semaphor-ldap server")
         LOG.debug("config directory: '%s'", self.config_dir_path)
 
+        if not options.config:
+            options.config = app_platform.get_default_server_config()
         if not options.config or not os.path.isfile(options.config):
-            LOG.error("Missing server *.cfg file, see --help.")
-            return
+            raise SemaphorLDAPServerError("Missing server *.cfg file, see --help.")
 
         self.config = server_config.ServerConfig(options.config)
 
@@ -107,7 +109,7 @@ class Server(object):
 
     def set_config_dir(self):
         """Set semaphor-ldap config directory."""
-        self.config_dir_path = utils.get_config_path()
+        self.config_dir_path = app_platform.get_config_path()
         if os.path.exists(self.config_dir_path):
             if not os.path.isdir(self.config_dir_path):
                 LOG.error("'%s' exists and is not a dir")
@@ -147,7 +149,8 @@ class Server(object):
     def init_db(self):
         """Initializes the db object"""
         LOG.debug("initializing db")
-        schema_file_name = self.config.get("local-db-schema")
+        schema_file_name = self.config.get("local-db-schema") or \
+            app_platform.get_default_schema_path()
         local_db_name = utils.local_db_path(
             self.flow_username,
             self.config_dir_path, 

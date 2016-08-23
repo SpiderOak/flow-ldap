@@ -11,7 +11,7 @@ import json
 
 import requests
 
-import utils, http
+import utils, http, app_platform
 from log import app_log
 
 
@@ -44,7 +44,7 @@ class Cli(object):
         The config file path is read from an env variable.
         """
         config_file_name = os.path.join(
-            utils.get_config_path(),
+            app_platform.get_config_path(),
             utils.AUTOCONNECT_CONFIG_FILE_NAME)
         cfg = RawConfigParser()
         cfg.read(config_file_name)

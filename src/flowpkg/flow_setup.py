@@ -9,7 +9,7 @@ import time
 
 from flow import Flow
 
-from src import utils
+from src import utils, app_platform
 from src.db import backup
 import flow_util
 
@@ -50,12 +50,17 @@ def run(config):
 
 def create_flow_object(config):
     flow_config = {
-        "host": config.get("flow-service-host"),
-        "port": config.get("flow-service-port"),
-        "use_tls": config.get("flow-service-use-tls"),
-        "flowappglue": config.get("flowappglue"),
-        "schema_dir": config.get("schema-dir"),
-        "db_dir": utils.get_config_path(),
+        "host": config.get("flow-service-host") or \
+            utils.DEFAULT_FLOW_SERVICE_HOST,
+        "port": config.get("flow-service-port") or \
+            utils.DEFAULT_FLOW_SERVICE_PORT,
+        "use_tls": config.get("flow-service-use-tls") or \
+            utils.DEFAULT_FLOW_SERVICE_USE_TLS,
+        "flowappglue": config.get("flowappglue") or \
+            app_platform.get_default_flowappglue_path(),
+        "schema_dir": config.get("schema-dir") or \
+            app_platform.get_default_backend_schema_path(),
+        "db_dir": app_platform.get_config_path(),
     }
     flow_args = {
         key: value for (key, value) in flow_config.items() \
@@ -123,7 +128,6 @@ def setup_dma_account(flow, config):
     ))
     # Sending TJR to the LDAP team right away
     flow.new_org_join_request(ldap_tid)
-    # Set bot profile
     set_dma_profile(flow)
     return False
 
@@ -248,14 +252,20 @@ def wait_for_sync(flow):
 
 
 def set_dma_profile(flow):
-    # TODO update path
-    # profile_image_file = "config/bot.jpg"
-    # with open(profile_image_file, "r") as image_file:
-    #    image_data = "data:image/jpg;base64,%s" % base64.b64encode(image_file.read())
+    profile_img_filename = os.path.join(
+        app_platform.get_default_backend_path(),
+        "img",
+        "bot.jpg",
+    )
     image_data = None
+    if os.path.isfile(profile_img_filename):
+        with open(profile_img_filename, "r") as image_file:
+            image_data = "data:image/jpg;base64,%s" % \
+                base64.b64encode(image_file.read())
     content = flow.get_profile_item_json(
         display_name="Semaphor-LDAP Bot",
-        biography="Semaphor-LDAP Bot Directory Management Account",
+        biography=\
+            "Semaphor-LDAP Bot Directory Management Account",
         photo=image_data,
     )
     flow.set_profile("profile", content) 
