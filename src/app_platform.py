@@ -23,8 +23,10 @@ $CONFIG/server-auto-connect.log
 
 import sys
 import os
+import time
 
 import utils
+
 
 _CONFIG_OS_PATH_MAP = {
     "darwin": "Library/Application Support/semaphor-ldap",
@@ -39,8 +41,9 @@ _DEFAULT_APP_WINDOWS_PATH = r"semaphor-ldap\resources\app"
 _DEFAULT_ATTACHMENT_DIR = "downloads"
 _DEFAULT_BACKEND_DIR = "backend"
 _DEFAULT_SCHEMA_DIR = "schema"
-_DEFAULT_FLOWAPPGLUE_BINARY_DEV_NAME = "flowappglue"
-_DEFAULT_FLOWAPPGLUE_BINARY_PROD_NAME = "semaphor-backend"
+_EXE_EXT = (".exe" if sys.platform == "win32" else "")
+_DEFAULT_FLOWAPPGLUE_BINARY_DEV_NAME = "flowappglue%s" % _EXE_EXTENSION
+_DEFAULT_FLOWAPPGLUE_BINARY_PROD_NAME = "semaphor-backend%s" % _EXE_EXTENSION
 
 SEMLDAP_CONFIGDIR_ENV_VAR = "SEMLDAP_CONFIGDIR"
 
@@ -106,6 +109,14 @@ def get_default_schema_path():
     return os.path.join(
         _APP_OS_PATH_MAP[sys.platform](),
         _DEFAULT_SCHEMA_DIR,
+	"dma.sql",
+    )
+
+
+def get_default_img_path():
+    return os.path.join(
+        _APP_OS_PATH_MAP[sys.platform](),
+	"img",
     )
 
 
@@ -147,7 +158,7 @@ def get_default_flowappglue_path():
     return flowappglue_path
 
 
-def get_default_glue_out_filename():
+def get_glue_out_filename():
     """Returns a string with a default filename for the
     flowappglue output log file.
     Default Format: "semaphor_backend_%Y%m%d%H%M%S.log".

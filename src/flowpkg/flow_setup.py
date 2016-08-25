@@ -4,8 +4,10 @@ flow_setup.py
 Performs the flow setup process for semaphor-ldap server.
 """
 
+import os
 import logging
 import time
+import base64
 
 from flow import Flow
 
@@ -61,6 +63,7 @@ def create_flow_object(config):
         "schema_dir": config.get("schema-dir") or \
             app_platform.get_default_backend_schema_path(),
         "db_dir": app_platform.get_config_path(),
+	"glue_out_filename": app_platform.get_glue_out_filename(),
     }
     flow_args = {
         key: value for (key, value) in flow_config.items() \
@@ -253,15 +256,16 @@ def wait_for_sync(flow):
 
 def set_dma_profile(flow):
     profile_img_filename = os.path.join(
-        app_platform.get_default_backend_path(),
-        "img",
+        app_platform.get_default_img_path(),
         "bot.jpg",
     )
     image_data = None
     if os.path.isfile(profile_img_filename):
-        with open(profile_img_filename, "r") as image_file:
-            image_data = "data:image/jpg;base64,%s" % \
-                base64.b64encode(image_file.read())
+        with open(profile_img_filename, "rb") as image_file:
+	    image_raw_data = image_file.read()
+        image_data = "data:image/jpeg;base64,%s" % ( 
+	    base64.b64encode(image_raw_data),
+	)
     content = flow.get_profile_item_json(
         display_name="Semaphor-LDAP Bot",
         biography=\

@@ -151,7 +151,7 @@ class Server(object):
         LOG.debug("initializing db")
         schema_file_name = self.config.get("local-db-schema") or \
             app_platform.get_default_schema_path()
-        local_db_name = utils.local_db_path(
+        local_db_name = app_platform.local_db_path(
             self.flow_username,
             self.config_dir_path, 
         )

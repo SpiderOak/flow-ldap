@@ -27,7 +27,7 @@ class LocalDB(object):
         self.db_file_name = db_file_name
         LOG.debug("using '%s' database", self.db_file_name)
         db_conn = self._get_connection()
-        with open(schema_file_name) as schema_file:
+        with open(schema_file_name, "r") as schema_file:
             db_conn.executescript(schema_file.read())
         db_conn.commit()
         db_conn.close()
