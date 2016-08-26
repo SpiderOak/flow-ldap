@@ -22,7 +22,7 @@ def supported_log_destinations():
     if sys.platform == "linux2":
         return ["syslog", "file"]
     elif sys.platform == "win32":
-        return ["event", "file"]
+        return ["file", "event"]  # TODO swap
     else:
         return ["file"]
 

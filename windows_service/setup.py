@@ -31,6 +31,7 @@ semaphor_windows_service = Target(
 
 setup(
     service = [semaphor_windows_service],
+    zipfile='service_runner/shared.zip',
     options = {
         "py2exe":{  "packages" : "encodings",
                     "includes" : \

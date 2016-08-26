@@ -8,10 +8,10 @@ http://code.activestate.com/recipes/576451-how-to-create-a-windows-service-in-py
 http://essiene.blogspot.com/2005/04/python-windows-services.html
 
 Usage: 
-$ python aservice.py install
-$ python aservice.py start
-$ python aservice.py stop
-$ python aservice.py remove
+$ python windows_service_main.py install
+$ python windows_service_main.py start
+$ python windows_service_main.py stop
+$ python windows_service_main.py remove
 """
 
 import win32service
@@ -38,9 +38,9 @@ class SemaphorLDAPService(win32serviceutil.ServiceFramework):
         self._wait_stop = win32event.CreateEvent(None, 0, 0, None)           
         executable_dir = os.path.dirname(sys.executable)
         spider_executable_path = os.path.join(
-            executable_dir, "semaphor-ldap.exe",
+            executable_dir, "semaphor_ldap.exe",
         )
-        self._semaphor_ldap_args = [spider_executable_path, "server",] 
+        self._semaphor_ldap_args = [spider_executable_path, "--debug", "server"] 
         self._timeout = 60 * 1000
         self._semaphor_ldap_process = None
 
@@ -51,10 +51,11 @@ class SemaphorLDAPService(win32serviceutil.ServiceFramework):
     def SvcDoRun(self):
         servicemanager.LogMsg(
             servicemanager.EVENTLOG_INFORMATION_TYPE,
-            servicemanager.PYS_SERVICE_STARTED,(self._svc_name_, ""),
+            servicemanager.PYS_SERVICE_STARTED,
+	    (self._svc_name_, ""),
         ) 
         servicemanager.LogInfoMsg("Semaphor-LDAP starting %s" % (
-            self._semaphor_ldap_args
+            self._semaphor_ldap_args,
         ))
         self._semaphor_ldap_process = subprocess.Popen(self._semaphor_ldap_args)
 
