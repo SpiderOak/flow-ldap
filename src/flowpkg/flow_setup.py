@@ -8,6 +8,7 @@ import os
 import logging
 import time
 import base64
+import threading
 
 from flow import Flow
 
@@ -24,30 +25,70 @@ class FlowSetupError(Exception):
     pass
 
 
-def run(config):
-    """Setups flow for the semaphor-ldap server."""
-    flow = None
+def start_up(server):
     try:
-        flow = create_flow_object(config)
-        device_created = setup_dma_account(flow, config)
+        server.flow.start_up()
+        LOG.debug(
+            "local account '%s' started",
+            flow.identifier()["username"],
+        )
+    except Flow.FlowError as start_up_err:
+        LOG.debug("start_up failed: '%s'", str(start_up_err))
+
+
+def create_device(server, flow_username, flow_password):
+    if not (flow_username and flow_password):
+        LOG.error("create_device: invalid args") 
+        return False
+    try:
+        server.flow.create_device(
+            username=flow_username,
+            password=flow_password,
+        )
+        LOG.info(
+            "Local Device for '%s' created",
+            flow_username,
+        )
+        start_setup_team_channels(server, True)
+        return True
+    except Flow.FlowError as create_device_err:
+        LOG.debug(
+            "create_device failed: '%s'",
+            str(create_device_err)
+        )
+        return False
+
+
+def start_setup_team_channels(server, device_created=False):
+    threading.Thread(
+        target=setup_team_channels,
+        args=(server, device_created,),
+    ).start()
+
+
+def setup_team_channels(server, device_created=False):
+    try:
         if device_created:
-            wait_for_sync(flow)
-        ldap_tid = setup_ldap_team(flow)
-        backup_cid, log_cid = setup_ldap_channels(flow, ldap_tid)
+            wait_for_sync(server.flow)
+        ldap_tid = setup_ldap_team(server.flow)
+        backup_cid, log_cid = setup_ldap_channels(server.flow, ldap_tid)
         if device_created:
-            restore_res = backup.restore(flow, ldap_tid, backup_cid)
+            restore_res = backup.restore(
+                server.flow, 
+                ldap_tid, 
+                backup_cid,
+            )
             if not restore_res:
                 raise Exception("db restore failed")
-        return flow, {
-            "ldap_team_id": ldap_tid,
-            "backup_cid": backup_cid,
-            "log_cid": log_cid,
-        }
+        # TODO: move to server class
+        server.ldap_team_id = ldap_tid
+        server.backup_cid = backup_cid
+        server.log_cid = log_cid
+        server.account_id = server.flow.account_id()
+        server.flow_username = server.flow.identifier()["username"]
+        server.flow_ready.set()
     except Exception as exception:
-        if flow:
-            flow.terminate()
-        raise FlowSetupError(exception)
-    return None
+        LOG.error("setup_team_channels failed: '%s'", str(exception))
 
 
 def create_flow_object(config):
@@ -72,67 +113,19 @@ def create_flow_object(config):
     return Flow(**flow_args)
 
 
-def setup_dma_account(flow, config):
-    """Initializes Flow instance from config info.
-    - If the account and device already exist, it will use them.
-    - If the account exists, but there's no device, it creates a device.
-    - If the account does not exist, it creates the account + device.
-    Returns True if there was a device creation.
-    """
-    # An Account + Device may already be local
-    # Try to start up first
-    try:
-        flow.start_up()
-        LOG.debug(
-            "local account '%s' started",
-            flow.identifier()["username"],
-        )
-        return False
-    except Flow.FlowError as start_up_err:
-        LOG.debug("start_up failed: '%s'", str(start_up_err))
-
-    # DMA account may already exist, but not locally.
-    # Try creating a new device if 
-    # username/password are provided in config
-    flow_username = config.get("flow-username")
-    flow_password = config.get("flow-password")
-    if flow_username and flow_password:
-        try:
-            flow.create_device(
-                username=flow_username,
-                password=flow_password,
-            )
-            LOG.info(
-                "Local Device for '%s' created",
-                flow_username,
-            )
-            return True
-        except Flow.FlowError as create_device_err:
-            LOG.debug(
-                "create_device failed: '%s'",
-                str(create_device_err)
-            )
-
-    # Account may not exist, try to create account + device
-    # for the Directory Management Account
-    dmk_var = "directory-management-key"
-    dmk = config.get(dmk_var)
-    LOG.debug("%s", dmk)
+def create_dma_account(flow, dmk):
     if not dmk:
-        raise Exception("missing '%s'" % dmk_var)
-    response = flow.create_dm_account(
-        dmk=dmk,
-    )
-    ldap_tid = response["orgId"]
-    print(
-        "account user=%s with pass=%s for team=%s "
-        "created successfully." % (
-        response["username"], response["password"], ldap_tid,
-    ))
-    # Sending TJR to the LDAP team right away
-    flow.new_org_join_request(ldap_tid)
-    set_dma_profile(flow)
-    return False
+        LOG.error("invalid dmk")
+        return None
+    try:
+        response = flow.create_dm_account(dmk=dmk)
+        flow.new_org_join_request(response["orgId"])
+        set_dma_profile(flow)
+        start_setup_team_channels(server)
+        return response
+    except Flow.FlowError as flow_err:
+        LOG.error("create_dma_account failed: '%s'", str(flow_err))
+        return None
 
 
 def wait_for_member(flow):

@@ -7,11 +7,48 @@ Config file functionality for semaphor-ldap server.
 import threading
 import logging
 from ConfigParser import RawConfigParser
+import StringIO
 
 from src import utils
 
 
 LOG = logging.getLogger("server_config")
+_DEFAULT_CONFIG = """
+[Semaphor LDAP Server]
+########################################
+# Generic
+listen-address = localhost
+listen-port = 8080
+db-backup-minutes = 60
+ldap-sync-minutes = 60
+excluded-accounts = 
+ldap-sync-on = no
+########################################
+# LDAP
+uri = ldap://domain.com
+base-dn = dc=domain,dc=com
+admin-user = cn=admin,dc=domain,dc=com
+admin-pw = password
+group-dn = ou=People,dc=domain,dc=com
+########################################
+# LDAP Vendor
+server-type = AD
+dir-member-source = member
+dir-username-source = userPrincipalName
+dir-fname-source = givenName
+dir-lname-source = sn
+dir-guid-source = objectGUID
+dir-auth-source = dn
+"""
+
+
+def create_config_file(config_file_path):
+    """Creates a config file with default values."""
+    buf = StringIO.StringIO(_DEFAULT_CONFIG)
+    cfg = RawConfigParser()
+    cfg.readfp(buf)
+    with open(config_file_path, "w") as config_file:
+        cfg.write(config_file)
 
 
 class ServerConfig(object):
@@ -21,45 +58,12 @@ class ServerConfig(object):
         self.lock = threading.Lock()
         self.config_file_path = config_file_path
         self.config_dict = {}
-        self.trigger_vars = {}
         self.sync_config()
         self.check_required_configs()
 
     def check_required_configs(self):
         """TODO: fail if required config values not present."""
         pass
-
-    def register_trigger_for_var(self, var, func):
-        """Register a callback to execute when 
-        the given variable changes value.
-        """
-        self.lock.acquire()
-        value = self.config_dict[var]
-        self.trigger_vars[var] = (value, func)
-        self.lock.release()
-
-    def trigger_callbacks(self):
-        """Execute callbacks for the registered 
-        variables that changed value.
-        """
-        funcs_to_trigger = []
-        self.lock.acquire()
-        # detect changes in tracked variables
-        for variable, value_func in self.trigger_vars.iteritems():
-            current_config_value = self.config_dict[variable]
-            if current_config_value != value_func[0]:
-                funcs_to_trigger.append((variable, value_func[1]))
-                self.trigger_vars[variable] = \
-                    (current_config_value, value_func[1])
-        self.lock.release()
-        # run triggers
-        for variable, func in funcs_to_trigger:
-            LOG.debug(
-                "triggering '%s' as '%s' variable value changed", 
-                func.__name__, 
-                variable,
-            )
-            func()
 
     def sync_config(self):
         """Load from config file into internal dict."""
@@ -69,7 +73,6 @@ class ServerConfig(object):
         self.lock.acquire()
         self.config_dict.update(utils.raw_config_as_dict(cfg).items()[0][1])
         self.lock.release()
-        self.trigger_callbacks()
 
     def get(self, var):
         self.lock.acquire()
@@ -83,3 +86,4 @@ class ServerConfig(object):
         if value:
             ret_list = value.strip(" \n").split("\n")
         return ret_list   
+

@@ -33,10 +33,10 @@ class FlowLogChannelHandler(logging.Handler):
 
 class FlowRemoteLogger(threading.Thread):
     
-    def __init__(self, flow, cid):
+    def __init__(self, server):
         super(FlowRemoteLogger, self).__init__()
-        self.flow = flow
-        self.cid = cid
+        self.flow = server.flow
+        self.flow_ready = server.flow_ready
         self.loop_logger = threading.Event()
         self.loop_logger.set()
         self.log_queue = Queue.Queue()
@@ -44,7 +44,6 @@ class FlowRemoteLogger(threading.Thread):
             raise NotMemberLogChannelError(
                 "Not member of the specified channel",
             )
-        self.tid = self.flow.get_channel(self.cid)["orgId"]
         self.MAX_Q_SIZE = 100
 
     def check_member(self):
@@ -67,6 +66,11 @@ class FlowRemoteLogger(threading.Thread):
     def run(self):
         logger = logging.getLogger("flow_remote_logger")
         logger.debug("flow remote logger thread started")
+        logger.debug("wait for flow to be ready")
+        self.flow_ready.wait()
+        logger.debug("flow ready start loop")
+        tid = server.ldap_team_id
+        cid = server.log_cid
         while self.loop_logger.is_set():
             try:
                 message = self.log_queue.get(block=True, timeout=0.25)
@@ -74,8 +78,8 @@ class FlowRemoteLogger(threading.Thread):
                 continue
             try:
                 self.flow.send_message(
-                    self.tid,
-                    self.cid,
+                    tid,
+                    cid,
                     message,
                     timeout=10,
                 )

@@ -17,6 +17,7 @@ class FlowNotify(threading.Thread):
 
     def __init__(self, server):
         super(FlowNotify, self).__init__()
+        self.flow_ready = server.flow_ready
         self.flow = server.flow
         self.loop_listener = threading.Event()
         self.loop_listener.set()
@@ -39,6 +40,9 @@ class FlowNotify(threading.Thread):
 
     def run(self):
         LOG.debug("flow notify thread started")
+        LOG.debug("waiting flow setup")
+        self.flow_ready.wait()
+        LOG.debug("flow ready, start notification listener")
         while self.loop_listener.is_set():
             self.flow.process_one_notification(timeout_secs=0.05)
             error = self.flow.get_notification_error(timeout_secs=0.05)

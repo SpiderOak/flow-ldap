@@ -28,16 +28,12 @@ import time
 from src import utils
 
 
-_CONFIG_OS_PATH_MAP = {
-    "darwin": "Library/Application Support/semaphor-ldap",
-    "linux2": ".config/semaphor-ldap",
-    "win32": r"AppData\Local\semaphor-ldap",
-}
 _DEFAULT_APP_OSX_PATH = "/Applications/Semaphor LDAP.app/Contents/Resources/app"
 _DEFAULT_APP_LINUX_RPM_PATH = "/opt/semaphor-ldap-linux-x64/resources/app"
 _DEFAULT_APP_LINUX_DEB_PATH = "/usr/share/semaphor-ldap/resources/app"
 _DEFAULT_APP_WINDOWS_PATH = r"semaphor-ldap\resources\app"
 
+_DEFAULT_CONFIG_DIR = "semaphor-ldap"
 _DEFAULT_ATTACHMENT_DIR = "downloads"
 _DEFAULT_BACKEND_DIR = "backend"
 _DEFAULT_SCHEMA_DIR = "schema"
@@ -67,13 +63,6 @@ def _windows_app_path():
     """Returns the default application directory for Windows."""
     return os.path.join(os.environ["ProgramFiles"],
                         _DEFAULT_APP_WINDOWS_PATH)
-
-
-def _get_home_directory():
-    """Returns a string with the home directory of the current user.
-    Returns $HOME for Linux/OSX and %USERPROFILE% for Windows.
-    """
-    return os.path.expanduser("~")
 
 
 _APP_OS_PATH_MAP = {
@@ -122,11 +111,22 @@ def get_default_img_path():
 
 def get_config_path():
     """Returns the default semaphor-ldap config path."""
+    CONFIG_OS_PATH_MAP = {
+        "darwin": "Library/Application Support",
+        "linux2": ".config",
+        "win32": r"%LOCALAPPDATA%",
+    }
     if SEMLDAP_CONFIGDIR_ENV_VAR in os.environ:
         return os.environ[SEMLDAP_CONFIGDIR_ENV_VAR]
+    config_path = CONFIG_OS_PATH_MAP[sys.platform]
+    if sys.platform in ["linux2", "win32"]:
+        config_path = os.path.join(
+            os.path.expanduser("~"),
+            config_path,
+        )
     return os.path.join(
-        _get_home_directory(),
-        _CONFIG_OS_PATH_MAP[sys.platform],
+        config_path,
+        _DEFAULT_CONFIG_DIR,
     )
 
 

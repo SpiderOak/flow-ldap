@@ -71,6 +71,7 @@ class Server(object):
         self.log_cid = ""
         self.config_dir_path = ""
         self.threads_running = False
+        self.flow_ready = threading.Event()
 
         if not self.set_config_dir():
             return
@@ -79,13 +80,7 @@ class Server(object):
         LOG.debug("initializing semaphor-ldap server")
         LOG.debug("config directory: '%s'", self.config_dir_path)
 
-        if not options.config:
-            options.config = app_platform.get_default_server_config()
-        if not options.config or not os.path.isfile(options.config):
-            raise SemaphorLDAPServerError("Missing server *.cfg file, see --help.")
-
-        self.config = server_config.ServerConfig(options.config)
-
+        self.init_config()
         self.init_flow()
         self.init_flow_log_channel()
         self.init_ldap()
@@ -134,19 +129,9 @@ class Server(object):
             self.backup_cid,
         )
 
-    def set_db_backup_from_config(self):
+    def schedule_db_back_up(self):
         minutes = int(self.config.get("db-backup-minutes"))
         self.cron.update_task_frequency(minutes, self.run_backup)
-
-    def schedule_db_back_up(self):
-        """Schedules the DB backup process."""
-        self.set_db_backup_from_config()
-        # Whenever "db-backup-minutes" variable is updated
-        # set_db_backup_from_config will be executed
-        self.config.register_trigger_for_var(
-            "db-backup-minutes",
-            self.set_db_backup_from_config,
-        )
 
     def init_db(self):
         """Initializes the db object"""
@@ -195,12 +180,6 @@ class Server(object):
         LOG.debug("initializing ldap sync scheduling")
         self.ldap_sync = ldap_sync.LDAPSync(self)
         self.set_ldap_sync_from_config()
-        # Whenever "ldap-sync-minutes" variable is updated
-        # set_ldap_sync_from_config will be executed
-        self.config.register_trigger_for_var(
-            "ldap-sync-minutes",
-            self.set_ldap_sync_from_config,
-        )
 
     def init_config_sync(self):
         """Initializes the config sync process."""
@@ -231,23 +210,31 @@ class Server(object):
                 prescribed_channel_ids,
             )
 
+    def init_config(self, options):
+        """Initializes the config handler."""
+        LOG.debug("initializing config")
+        # If not provided in args, use config from default location
+        if not options.config:
+            options.config = app_platform.get_default_server_config()
+        # If it doesn't exist, then create it with default values
+        if not os.path.isfile(options.config):
+            server_config.create_config_file(options.config)
+        # Load config file values to memory
+        self.config = server_config.ServerConfig(options.config)
+
     def init_flow(self):
         """Initializes the flow service."""
         LOG.debug("initializing flow")
-        try:
-            self.flow, setup_data = flow_setup.run(self.config)
-            self.account_id = self.flow.account_id()
-            self.flow_username = self.flow.identifier()["username"]
-            self.ldap_team_id = setup_data["ldap_team_id"]
-            self.backup_cid = setup_data["backup_cid"]
-            self.log_cid = setup_data["log_cid"]
-        except Exception as exception:
-            raise SemaphorLDAPServerError(exception)
+        self.flow = flow_setup.create_flow_object(
+            self.config,
+        )
+        flow_setup.start_up(self)
+        flow_setup.setup_team_channels(self)
 
     def init_flow_log_channel(self):
         """Initializes the logging of errors to a semaphor channel."""
         LOG.debug("initializing error logging to flow channel")
-        self.flow_remote_logger = FlowRemoteLogger(self.flow, self.log_cid)        
+        self.flow_remote_logger = FlowRemoteLogger(self)
         app_log.configure_flow_log(self.flow_remote_logger)
 
     def init_http(self):
