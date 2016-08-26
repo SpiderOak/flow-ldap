@@ -8,7 +8,7 @@ import threading
 import logging
 from ConfigParser import RawConfigParser
 
-import utils
+from src import utils
 
 
 LOG = logging.getLogger("server_config")

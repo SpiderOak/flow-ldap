@@ -13,9 +13,13 @@ import argparse
 import logging
 import signal
 
-import utils
-import cli, server, api_gen
-from log import app_log
+from src import utils
+from src import (
+    cli, 
+    server, 
+    api_gen,
+)
+from src.log import app_log
 
 
 LOG = logging.getLogger("semaphor-ldap")
@@ -48,6 +52,7 @@ def run_server(options):
         server_obj.run()
     except Exception as exception:
         LOG.error("server execution failed with '%s'", exception)
+	raise
     finally:  # Also catches SystemExit
         if server_obj:
             server_obj.cleanup()

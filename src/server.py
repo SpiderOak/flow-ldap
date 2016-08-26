@@ -12,25 +12,27 @@ import time
 
 from flow import Flow
 
-import utils
-import app_platform
-import http
-from log import app_log
+from src import (
+    utils,
+    app_platform,
+    http,
+    cron,
+    server_config,
+)
+from src.sync import ldap_sync
+from src.log import app_log
 import db.local_db
 import db.backup
-import sync.ldap_sync
-import cron
-import server_config
-from ldap_factory import LDAPFactory
-from flowpkg import flow_setup, flow_util
-from flowpkg.flow_notify import FlowNotify
-from flowpkg.handler import (
+from src.ldap_factory import LDAPFactory
+from src.flowpkg import flow_setup, flow_util
+from src.flowpkg.flow_notify import FlowNotify
+from src.flowpkg.handler import (
     LDAPBindRequestHandler,
     ChannelMemberEventHandler,
     UploadHandler,
     TeamMemberEventHandler,
 )
-from log.flow_log_channel_handler import FlowRemoteLogger
+from src.log.flow_log_channel_handler import FlowRemoteLogger
 
 
 LOG = logging.getLogger("server")
@@ -191,7 +193,7 @@ class Server(object):
     def init_ldap_sync(self):
         """Initializes the ldap sync process and schedules it."""
         LOG.debug("initializing ldap sync scheduling")
-        self.ldap_sync = sync.ldap_sync.LDAPSync(self)
+        self.ldap_sync = ldap_sync.LDAPSync(self)
         self.set_ldap_sync_from_config()
         # Whenever "ldap-sync-minutes" variable is updated
         # set_ldap_sync_from_config will be executed

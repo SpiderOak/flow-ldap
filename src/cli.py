@@ -11,8 +11,12 @@ import json
 
 import requests
 
-import utils, http, app_platform
-from log import app_log
+from src import (
+    utils, 
+    http, 
+    app_platform,
+)
+from src.log import app_log
 
 
 LOG = logging.getLogger("cli")

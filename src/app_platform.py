@@ -25,7 +25,7 @@ import sys
 import os
 import time
 
-import utils
+from src import utils
 
 
 _CONFIG_OS_PATH_MAP = {
@@ -42,8 +42,8 @@ _DEFAULT_ATTACHMENT_DIR = "downloads"
 _DEFAULT_BACKEND_DIR = "backend"
 _DEFAULT_SCHEMA_DIR = "schema"
 _EXE_EXT = (".exe" if sys.platform == "win32" else "")
-_DEFAULT_FLOWAPPGLUE_BINARY_DEV_NAME = "flowappglue%s" % _EXE_EXTENSION
-_DEFAULT_FLOWAPPGLUE_BINARY_PROD_NAME = "semaphor-backend%s" % _EXE_EXTENSION
+_DEFAULT_FLOWAPPGLUE_BINARY_DEV_NAME = "flowappglue%s" % _EXE_EXT
+_DEFAULT_FLOWAPPGLUE_BINARY_PROD_NAME = "semaphor-backend%s" % _EXE_EXT
 
 SEMLDAP_CONFIGDIR_ENV_VAR = "SEMLDAP_CONFIGDIR"
 

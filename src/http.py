@@ -21,8 +21,8 @@ from jsonrpc import JSONRPCResponseManager, dispatcher
 from jsonrpc.jsonrpc2 import JSONRPC20Response
 from jsonrpc.exceptions import JSONRPCInvalidRequest
 
-import utils
-from log import app_log
+from src import utils
+from src.log import app_log
 
 
 LOG = logging.getLogger("http")
