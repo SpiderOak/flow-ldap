@@ -71,7 +71,8 @@ def parse_options(argv):
         "--debug",
         action="store_true",
         help="Debug Mode",
-        default=False)
+        default=False,
+    )
 
     subparsers = parser.add_subparsers(title="Modes")
 
@@ -83,28 +84,16 @@ def parse_options(argv):
         metavar="CONFIG",
         help="Config cfg file with LDAP and Semaphor settings",
     )
-    server_parser.add_argument(
-        "--log-dest",
-        metavar="DEST",
-        help="Application logging destination {syslog,event,file,null}",
-        default=app_log.supported_log_destinations()[0],
-    )
 
     # CLI config
     cli_parser = subparsers.add_parser("client", help="Client Mode")
     cli_parser.set_defaults(server_mode=False)
 
     # Add API methods
-    cli_subparsers = cli_parser.add_subparsers(title="Commands")
+    cli_subparsers = cli_parser.add_subparsers(title="Commands", metavar="{API COMMAND FROM THE LIST}")
     api_gen.add_api_methods(cli_subparsers)
 
     options = parser.parse_args(argv[1:])
-
-    if options.server_mode and \
-            options.log_dest not in app_log.supported_log_destinations():
-        print("Logging destination '%s' not supported on this platform."
-              % options.log_dest)
-        sys.exit(os.EX_USAGE)
 
     return options
 

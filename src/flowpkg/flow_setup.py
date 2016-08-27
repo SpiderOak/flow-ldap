@@ -30,8 +30,9 @@ def start_up(server):
         server.flow.start_up()
         LOG.debug(
             "local account '%s' started",
-            flow.identifier()["username"],
+            server.flow.identifier()["username"],
         )
+        setup_team_channels(server)
     except Flow.FlowError as start_up_err:
         LOG.debug("start_up failed: '%s'", str(start_up_err))
 
@@ -80,15 +81,41 @@ def setup_team_channels(server, device_created=False):
             )
             if not restore_res:
                 raise Exception("db restore failed")
+        # Add admins to log channel
+        flow_util.add_admins_to_channel(
+            server.flow, 
+            ldap_tid,
+            log_cid,
+        )
         # TODO: move to server class
         server.ldap_team_id = ldap_tid
         server.backup_cid = backup_cid
         server.log_cid = log_cid
         server.account_id = server.flow.account_id()
         server.flow_username = server.flow.identifier()["username"]
+        # Perform scan to add db accounts (if any) to prescribed channels 
+        scan_prescribed_channels(server)
         server.flow_ready.set()
     except Exception as exception:
         LOG.error("setup_team_channels failed: '%s'", str(exception))
+
+
+def scan_prescribed_channels(server):
+    """Performs a scan over the prescribed channels
+    and adds remaining accounts to them.
+    """
+    LOG.debug("scan prescribed channels")
+    prescribed_channel_ids = flow_util.get_prescribed_cids(
+        server.flow, 
+        server.ldap_team_id, 
+    )
+    if prescribed_channel_ids:
+        flow_util.rescan_accounts_on_channels(
+            server.flow, 
+            server.db, 
+            server.ldap_team_id,
+            prescribed_channel_ids,
+        )
 
 
 def create_flow_object(config):
@@ -110,22 +137,22 @@ def create_flow_object(config):
         key: value for (key, value) in flow_config.items() \
         if value is not None
     }
-    return Flow(**flow_args)
+    flow = Flow(**flow_args)
+    flow.set_api_timeout(utils.FLOW_API_TIMEOUT)
+    return flow
 
 
-def create_dma_account(flow, dmk):
-    if not dmk:
-        LOG.error("invalid dmk")
-        return None
+def create_dma_account(server, dmk):
+    assert(dmk)
     try:
-        response = flow.create_dm_account(dmk=dmk)
-        flow.new_org_join_request(response["orgId"])
-        set_dma_profile(flow)
+        response = server.flow.create_dm_account(dmk=dmk)
+        server.flow.new_org_join_request(response["orgId"])
+        set_dma_profile(server.flow)
         start_setup_team_channels(server)
         return response
     except Flow.FlowError as flow_err:
         LOG.error("create_dma_account failed: '%s'", str(flow_err))
-        return None
+        raise
 
 
 def wait_for_member(flow):

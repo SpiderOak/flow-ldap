@@ -119,7 +119,7 @@ def get_config_path():
     if SEMLDAP_CONFIGDIR_ENV_VAR in os.environ:
         return os.environ[SEMLDAP_CONFIGDIR_ENV_VAR]
     config_path = CONFIG_OS_PATH_MAP[sys.platform]
-    if sys.platform in ["linux2", "win32"]:
+    if sys.platform in ["linux2", "darwin"]:
         config_path = os.path.join(
             os.path.expanduser("~"),
             config_path,

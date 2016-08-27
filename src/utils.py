@@ -25,6 +25,8 @@ DEFAULT_FLOW_SERVICE_HOST = "flow.spideroak.com"
 DEFAULT_FLOW_SERVICE_PORT = "443"
 DEFAULT_FLOW_SERVICE_USE_TLS = "true"
 
+FLOW_API_TIMEOUT = 15
+
 
 def raw_config_as_dict(config):
     """Returns a RawConfigParser as a 'dict'.

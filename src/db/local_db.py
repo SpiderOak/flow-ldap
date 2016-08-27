@@ -37,6 +37,18 @@ class LocalDB(object):
         db_conn.row_factory = sqlite3.Row
         return db_conn
 
+    def check_connection(self):
+        try:
+            db_conn = self._get_connection()
+            db_conn.close()
+            return True
+        except sqlite3.Error as sqlite3_err:
+            LOG.error(
+                "failed to establish db connection: '%s'", 
+                sqlite3_err,
+            )
+            return False
+
     def entries_to_setup(self, db_conn):
         """Get accounts that are on LDAP but not on local DB and
         they are marked as enabled on LDAP.

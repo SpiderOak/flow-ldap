@@ -25,11 +25,13 @@ class LDAPSync(object):
         self.config = server.config
         self.ldap_tid = server.ldap_team_id
         self.config = server.config
+        self.sync_on = server.sync_on
+        self.flow_ready = server.flow_ready
 
     def get_ldap_userlist(self):
         """Retrieves the LDAP user directory using the config group_dn."""
-        group_dn = self.config.get("group-dn")
         ldap_conn = self.ldap_factory.get_connection()
+        group_dn = self.config.get("group-dn")
         group = ldap_conn.get_group(group_dn)
         group_users = group.userlist()
         excluded_accounts = self.config.get_list("excluded-accounts")
@@ -59,8 +61,18 @@ class LDAPSync(object):
 
     def run(self):
         """Runs the actual LDAP sync operation."""
+        if not self.sync_on.is_set():
+            LOG.info("sync disabled, skip run")
+            return
+        if not self.flow_ready.is_set():
+            LOG.info("flow not ready, skip run")
+            return
         LOG.debug("start")
-        ldap_accounts = self.get_ldap_userlist()
+        try:
+            ldap_accounts = self.get_ldap_userlist()
+        except Exception as exception:
+            LOG.error("Failed to get ldap userlist: '%s'", str(exception))
+            return
         LOG.debug("ldap accounts: %s", ldap_accounts)
         delta_changes = self.db.delta(ldap_accounts)
         actions = self.changes_into_actions(delta_changes)

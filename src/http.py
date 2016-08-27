@@ -23,6 +23,7 @@ from jsonrpc.exceptions import JSONRPCInvalidRequest
 
 from src import utils
 from src.log import app_log
+from src.flowpkg import flow_setup
 
 
 LOG = logging.getLogger("http")
@@ -51,21 +52,35 @@ class HttpApi(object):
         self.server = server
         self.ldap_factory = self.server.ldap_factory
         self.flow = self.server.flow
+        self.db = server.db
         self.http_server = http_server
 
-    def can_auth(self, username, password):
-        """Performs LDAP authentication and returns result.
+    def create_account(self, dmk):
+        """Creates the Directory Management Account.
+        It returns the generated username and password.
         Arguments:
-        username : Account username.
-        password : Account password.
+        dmk : Directory Management Key.
         """
-        ldap_conn = self.ldap_factory.get_connection()
-        return ldap_conn.can_auth(username, password)
+        if not dmk:
+            raise Exception("Empty dmk.")
+        response = flow_setup.create_dma_account(self.server, dmk)
+        return response
+
+    def create_device(self, username, password):
+        """Creates a new device for the DMA.
+        Arguments:
+        username : Flow DMA username.
+        password : Flow DMA password.
+        """
+        if not username or not password:
+            raise Exception("Empty username/password")
+        response = flow_setup.create_device(self.server, username, password)
+        return "Success"
 
     def stop_server(self):
         """Stops the semaphor-ldap server."""
         self.http_server.keep_running.clear()
-        return "Terminating Server"
+        return "Success"
 
     def group_userlist(self, group_dn):
         """Returns the userlist for a given LDAP Group/OU.
@@ -86,6 +101,24 @@ class HttpApi(object):
             raise Exception("Logging destination not supported on platform")
         self.server.configure_logging(target)
         return "Success"
+
+    def config_list(self):
+        """Returns a list with the current server configuration."""
+        return str(self.server.config.get_key_values())
+
+    def config_set(self, key, value):
+        """Returns a list with the current server configuration."""
+        self.server.config.set_key_value(key, value)
+        return "Success"
+
+    def check_status(self):
+        """Executes health checks and returns the server status."""
+        return {
+            "ldap": "OK" \
+                if self.ldap_factory.check_connection() else "FAIL",
+            "flow": "OK",
+            "db": "OK" if self.db.check_connection() else "FAIL",
+        }
 
     @classmethod
     def get_apis(cls):

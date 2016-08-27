@@ -45,6 +45,9 @@ class Cron(threading.Thread):
         """Runs the schedule loop."""
         LOG.debug("cron thread started")
         while self.loop_schedule.is_set():
-            schedule.run_pending()
+            try:
+                schedule.run_pending()
+            except Exception as exception:
+                LOG.error("cron job failed: %s", exception)
             time.sleep(1)
         LOG.debug("cron thread finished")

@@ -4,11 +4,15 @@ ldap_factory.py
 
 """
 
+import logging
+import ldap
 
 import ldap_reader
 
 
-# TODO: use reload_config, TBD
+LOG = logging.getLogger("ldap_factory")
+
+
 class LDAPFactory(object):
     
     def __init__(self, config):
@@ -16,6 +20,7 @@ class LDAPFactory(object):
         self.reload_config()
 
     def reload_config(self):
+        LOG.debug("reloading ldap config")
         self.uri = self.config.get("uri")
         self.base_dn = self.config.get("base-dn")
         self.admin_user = self.config.get("admin-user")
@@ -38,3 +43,14 @@ class LDAPFactory(object):
             self.admin_pw,
             self.ldap_vendor_map,
         )
+
+    def check_connection(self):
+        try:
+            self.get_connection()
+            return True
+        except ldap.LDAPError as ldap_err:
+            LOG.error(
+                "Failed to establish ldap connection: '%s'",
+                str(ldap_err),
+            )
+            return False
