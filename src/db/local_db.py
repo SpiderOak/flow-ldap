@@ -8,6 +8,8 @@ import logging
 import sqlite3
 import sqlitebck
 
+from src import app_platform
+
 
 LOG = logging.getLogger("local_db")
 
@@ -22,9 +24,9 @@ BACKUP_FILENAME_SUFFIX = "-backup"
 class LocalDB(object):
     """Encapsulates semaphor-ldap local DB operations."""
 
-    def __init__(self, schema_file_name, db_file_name):
+    def __init__(self, schema_file_name):
         self.schema_file_name = schema_file_name
-        self.db_file_name = db_file_name
+        self.db_file_name = app_platform.local_db_path()
         LOG.debug("using '%s' database", self.db_file_name)
         db_conn = self._get_connection()
         with open(schema_file_name, "r") as schema_file:
@@ -38,16 +40,8 @@ class LocalDB(object):
         return db_conn
 
     def check_connection(self):
-        try:
-            db_conn = self._get_connection()
-            db_conn.close()
-            return True
-        except sqlite3.Error as sqlite3_err:
-            LOG.error(
-                "failed to establish db connection: '%s'", 
-                sqlite3_err,
-            )
-            return False
+        db_conn = self._get_connection()
+        db_conn.close()
 
     def entries_to_setup(self, db_conn):
         """Get accounts that are on LDAP but not on local DB and
@@ -56,8 +50,7 @@ class LocalDB(object):
         """
         cur = db_conn.cursor()
         cur.execute(
-            """select lg.uniqueid, lg.email, 
-            lg.firstname, lg.lastname, lg.enabled
+            """select lg.uniqueid, lg.email, lg.enabled
             from ldap_group lg 
             left join ldap_account la on lg.uniqueid = la.uniqueid 
             where lg.enabled and la.uniqueid is null and 
@@ -77,8 +70,7 @@ class LocalDB(object):
         """
         cur = db_conn.cursor()
         cur.execute(
-            """select lg.uniqueid, lg.email, 
-            lg.firstname, lg.lastname, lg.enabled
+            """select lg.uniqueid, lg.email, lg.enabled
             from ldap_group lg 
             left join ldap_account la on lg.uniqueid = la.uniqueid 
             left join semaphor_account sa on la.id = sa.ldap_account
@@ -97,7 +89,6 @@ class LocalDB(object):
         cur.execute(
             """/* ldaped accounts with 'enabled' mismatch. */
             select lg.uniqueid as uniqueid, lg.email as email,
-            lg.firstname as firstname, lg.lastname as lastname, 
             lg.enabled as enabled
             from ldap_group lg
             left join ldap_account la on lg.uniqueid = la.uniqueid
@@ -111,9 +102,7 @@ class LocalDB(object):
             /* ldaped accounts not present in ldap but present in our db
              * and currently enabled 
              */
-            select la.uniqueid as uniqueid, la.email as email,
-            la.firstname as firstname, la.lastname as lastname, 
-            0 as enabled
+            select la.uniqueid as uniqueid, la.email as email, 0 as enabled
             from ldap_account la
             left join ldap_group lg on la.uniqueid = lg.uniqueid
             left join semaphor_account sa on la.id = sa.ldap_account
@@ -132,28 +121,10 @@ class LocalDB(object):
         cur.execute(
             """/* accounts that reappeared on ldap and are disabled on our db */
             select lg.uniqueid as uniqueid, lg.email as email,
-            lg.firstname as firstname, lg.lastname as lastname, 
             lg.enabled as ldap_enabled, la.enabled as db_enabled
             from ldap_group lg
             left join ldap_account la on lg.email = la.email
             where lg.uniqueid != la.uniqueid
-            """,
-        )
-        accounts = cur.fetchall()
-        cur.close()
-        return accounts
-
-    def entries_to_update_ldap_data(self, db_conn):
-        """Get accounts that need their LDAP data updated.
-        That is (for now) firstname and lastname.
-        """
-        cur = db_conn.cursor()
-        cur.execute(
-            """select lg.uniqueid as uniqueid,
-            lg.firstname as firstname, lg.lastname as lastname
-            from ldap_group lg
-            left join ldap_account la on lg.uniqueid = la.uniqueid
-            where la.firstname != lg.firstname or la.lastname != lg.lastname
             """,
         )
         accounts = cur.fetchall()
@@ -195,14 +166,13 @@ class LocalDB(object):
         )
         ldap_account_values = [
             (ldap_account["uniqueid"], ldap_account["email"],
-             ldap_account["firstname"], ldap_account["lastname"],
              ldap_account["enabled"]) 
             for ldap_account in ldap_accounts
         ]
         cur.executemany(
             """insert into ldap_group
-            (uniqueid, email, firstname, lastname, enabled) 
-            values (?, ?, ?, ?, ?)
+            (uniqueid, email, enabled) 
+            values (?, ?, ?)
             """,
             ldap_account_values,
         )
@@ -214,8 +184,6 @@ class LocalDB(object):
         delta_changes["setup"] = self.entries_to_setup(db_conn)
         delta_changes["retry_setup"] = self.entries_to_retry_setup(db_conn)
         delta_changes["update_lock"] = self.entries_to_update_lock(db_conn)
-        delta_changes["update_ldap_data"] = \
-            self.entries_to_update_ldap_data(db_conn)
 
         db_conn.close()
         return delta_changes
@@ -232,13 +200,12 @@ class LocalDB(object):
         # Create entry on the ldap_account table first
         ldap_data_values = (
             ldap_data["uniqueid"], ldap_data["email"],
-            ldap_data["firstname"], ldap_data["lastname"],
             ldap_data["enabled"],
         ) 
         cur.execute(
             """insert into ldap_account 
-            (uniqueid, email, firstname, lastname, enabled) 
-            values (?, ?, ?, ?, ?)
+            (uniqueid, email, enabled) 
+            values (?, ?, ?)
             """, 
             ldap_data_values,
         )
@@ -332,25 +299,23 @@ class LocalDB(object):
         db_conn.close()
         return True
 
-    def update_ldap_data(self, ldap_account):
-        """Updates the ldap_account entry, for now it
-        only updates the firstname and lastname columns.
-        """
+    def get_db_accounts(self):
+        """Returns the accounts on the local db."""
         db_conn = self._get_connection()
         cur = db_conn.cursor()
         cur.execute(
-            """update ldap_account
-            set firstname = ?, lastname = ?
-            where uniqueid = ?
-            """, (
-                ldap_account["firstname"], 
-                ldap_account["lastname"],
-                ldap_account["uniqueid"]
-            ),
+            """select email, uniqueid, enabled, semaphor_guid, state
+            from ldap_account la
+            left join semaphor_account sa on la.id = sa.ldap_account
+            """,
         )
-        db_conn.commit()
+        accounts = []
+        for row_account in cur.fetchall():
+            account_map = {}
+            account_map.update(row_account)
+            accounts.append(account_map)
         db_conn.close()
-        return True
+        return accounts
 
     def get_ldaped_accounts(self):
         """Returns the semaphor account ids of the ldaped accounts,
@@ -366,7 +331,6 @@ class LocalDB(object):
             """,
         )
         account_ids = [account[0] for account in cur.fetchall()]
-        db_conn.commit()
         db_conn.close()
         return account_ids
 

@@ -175,3 +175,11 @@ def rescan_accounts_on_channels(flow, db, ldap_tid, cids):
         return
     for cid in cids:
         rescan_accounts_on_channel(flow, ldap_tid, cid, accounts)
+
+
+def check_flow_connection(flow, tid, cid):
+    flow.send_message(
+        tid,
+        cid,
+        "test",
+    )

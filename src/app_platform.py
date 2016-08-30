@@ -114,7 +114,7 @@ def get_config_path():
     CONFIG_OS_PATH_MAP = {
         "darwin": "Library/Application Support",
         "linux2": ".config",
-        "win32": r"%LOCALAPPDATA%",
+        "win32": r"%SYSTEMROOT%\system32\config\systemprofile\AppData\Local",
     }
     if SEMLDAP_CONFIGDIR_ENV_VAR in os.environ:
         return os.environ[SEMLDAP_CONFIGDIR_ENV_VAR]
@@ -177,9 +177,9 @@ def get_default_server_config():
     )
 
 
-def local_db_path(username, config_dir_path=get_config_path()):
+def local_db_path():
     """Returns the local DB filename for the DMA account."""
     return os.path.join(
         get_config_path(),
-        "%s.sqlite" % username,
+        "DMA.sqlite",
     )

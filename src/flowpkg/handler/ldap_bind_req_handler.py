@@ -20,10 +20,9 @@ class LDAPBindRequestHandler(object):
     """Runs the LDAP auth/bind request handler."""
 
     def __init__(self, server):
+        self.server = server
         self.flow = server.flow
         self.ldap_factory = server.ldap_factory
-        self.db = server.db
-        self.ldap_tid = server.ldap_team_id
         self.notif_types = [Flow.LDAP_BIND_REQUEST_NOTIFICATION]
 
     def callback(self, _notif_type, notif_data):
@@ -42,8 +41,8 @@ class LDAPBindProcessor(threading.Thread):
         super(LDAPBindProcessor, self).__init__()
         self.flow = ldap_bind_handler.flow
         self.ldap_factory = ldap_bind_handler.ldap_factory
-        self.db = ldap_bind_handler.db
-        self.ldap_tid = ldap_bind_handler.ldap_tid
+        self.db = ldap_bind_handler.server.db
+        self.ldap_tid = ldap_bind_handler.server.ldap_team_id
         self.notif_data = notif_data
 
     def run(self):
@@ -150,7 +149,9 @@ class LDAPBindProcessor(threading.Thread):
         Returns True if the credentials are correct.
         """
         ldap_conn = self.ldap_factory.get_connection()
-        return ldap_conn.can_auth(
+        response = ldap_conn.can_auth(
             username,
             password,
         )
+        ldap_conn.close()
+        return response

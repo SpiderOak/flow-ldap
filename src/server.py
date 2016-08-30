@@ -16,10 +16,10 @@ from flow import Flow
 from src import (
     utils,
     app_platform,
-    http,
     cron,
     server_config,
 )
+from src.http.http_local_server import HTTPServer
 from src.sync import ldap_sync
 from src.log import app_log
 from src.db import (
@@ -70,21 +70,21 @@ class Server(object):
         self.ldap_team_id = ""
         self.backup_cid = ""
         self.log_cid = ""
+        self.test_cid = ""
         self.config_dir_path = ""
         self.threads_running = False
         self.flow_ready = threading.Event()
-        self.sync_on = threading.Event()
-        self.sync_on.set()
+        self.ldap_sync_on = threading.Event()
         self.logging_destination = ""
 
         self.init_config_dir()
         self.init_log()
         LOG.info("initializing semaphor-ldap server")
         self.init_config(options)
+        self.init_cron()
         self.init_flow()
         self.init_flow_log_channel()
         self.init_ldap()
-        self.init_cron()
         self.init_db()
         self.init_ldap_sync()
         self.init_flow_notify()
@@ -136,14 +136,7 @@ class Server(object):
         LOG.debug("initializing db")
         schema_file_name = self.config.get("local-db-schema") or \
             app_platform.get_default_schema_path()
-        local_db_name = app_platform.local_db_path(
-            self.flow_username,
-            self.config_dir_path, 
-        )
-        self.db = local_db.LocalDB(
-            schema_file_name, 
-            local_db_name, 
-        )
+        self.db = local_db.LocalDB(schema_file_name)
         self.config.register_callback(
             ["db-backup-minutes"],
             self.set_db_backup_mins_from_config,
@@ -154,7 +147,6 @@ class Server(object):
         """Initializes LDAP from config values."""
         LOG.debug("initializing ldap")
         self.ldap_factory = LDAPFactory(self.config)
-        self.ldap_factory.check_connection()
         self.config.register_callback(
             server_config.LDAP_VARIABLES,
             self.ldap_factory.reload_config,
@@ -190,7 +182,7 @@ class Server(object):
             ["ldap-sync-on"],
             self.set_ldap_sync_on_from_config,
         )
-        self.set_ldap_sync_mins_from_config()
+        self.set_ldap_sync_on_from_config()
 
     def init_flow_notify(self):
         LOG.debug("initializing flow notification system")
@@ -222,9 +214,23 @@ class Server(object):
         self.flow_remote_logger = FlowRemoteLogger(self)
         app_log.configure_flow_log(self.flow_remote_logger)
 
+    def check_flow_connection(self):
+        if not self.flow_ready.is_set():
+            raise Exception("DMA is not configured yet")
+        flow_util.check_flow_connection(
+            self.flow,
+            self.ldap_team_id,
+            self.test_cid,
+        )
+
+    def get_dma_fingerprint(self):
+        if not self.flow_ready.is_set():
+            raise Exception("DMA is not configured yet")
+        return self.flow.keyring_fingerprint()
+
     def init_http(self):
         """Initializes the HTTPServer instance."""
-        self.http_server = http.HTTPServer(self)
+        self.http_server = HTTPServer(self)
 
     def init_notif_handlers(self):
         self.ldap_bind_request_handler = LDAPBindRequestHandler(self)
@@ -245,7 +251,7 @@ class Server(object):
             utils.AUTOCONNECT_CONFIG_SECTION,
             "uri",
             "http://%s:%s/%s" % (
-                self.config.get("listen-address"),
+                utils.LOCAL_SERVER_HOST,
                 self.config.get("listen-port"),
                 utils.SERVER_JSON_RPC_URL_PATH,
             ),
@@ -270,7 +276,7 @@ class Server(object):
             - Starts the Bind Request Handler thread.
             - Starts the CLI HTTP request processing (on main thread)
         """
-        # Run an initial db sync
+        # Try an initial ldap sync
         self.ldap_sync.run()
 
         # Start cron thread, auth listener thread and remote logger thread
@@ -281,6 +287,18 @@ class Server(object):
 
         # Run HTTP server on main thread
         self.run_http()
+
+    def finalize_flow_config(self, ldap_tid, backup_cid, log_cid, test_cid):
+        # Init LDAP team and channel variables
+        self.ldap_team_id = ldap_tid
+        self.backup_cid = backup_cid
+        self.log_cid = log_cid
+        self.test_cid = test_cid
+        self.account_id = self.flow.account_id()
+        self.flow_username = self.flow.identifier()["username"]
+        # Perform scan to add db accounts (if any) to prescribed channels 
+        flow_setup.scan_prescribed_channels(self)
+        self.flow_ready.set()
 
     def run_http(self):
         """Runs the HTTP server."""

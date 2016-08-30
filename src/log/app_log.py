@@ -19,12 +19,11 @@ def supported_log_destinations():
     """Returns a list with the supported logging
     destinations for the platform.
     """
-    if sys.platform == "linux2":
+    if sys.platform in ["linux2", "darwin"]:
         return ["syslog", "file"]
     elif sys.platform == "win32":
         return ["file", "event"]  # TODO swap
-    else:
-        return ["file"]
+    return []
 
 
 def configured_syslog_handler():

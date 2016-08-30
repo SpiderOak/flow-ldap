@@ -72,7 +72,8 @@ def setup_team_channels(server, device_created=False):
         if device_created:
             wait_for_sync(server.flow)
         ldap_tid = setup_ldap_team(server.flow)
-        backup_cid, log_cid = setup_ldap_channels(server.flow, ldap_tid)
+        backup_cid, log_cid, test_cid = \
+            setup_ldap_channels(server.flow, ldap_tid)
         if device_created:
             restore_res = backup.restore(
                 server.flow, 
@@ -87,15 +88,12 @@ def setup_team_channels(server, device_created=False):
             ldap_tid,
             log_cid,
         )
-        # TODO: move to server class
-        server.ldap_team_id = ldap_tid
-        server.backup_cid = backup_cid
-        server.log_cid = log_cid
-        server.account_id = server.flow.account_id()
-        server.flow_username = server.flow.identifier()["username"]
-        # Perform scan to add db accounts (if any) to prescribed channels 
-        scan_prescribed_channels(server)
-        server.flow_ready.set()
+        server.finalize_flow_config(
+            ldap_tid, 
+            backup_cid, 
+            log_cid, 
+            test_cid,
+        )
     except Exception as exception:
         LOG.error("setup_team_channels failed: '%s'", str(exception))
 
@@ -194,69 +192,67 @@ def setup_ldap_team(flow):
 
 
 def setup_ldap_channels(flow, ldap_tid):
-    backup_cid = create_backup_channel(flow, ldap_tid)
-    log_cid = create_log_channel(flow, ldap_tid)
-    return backup_cid, log_cid
-    
-
-def gen_backup_channel_name(flow):
-    dma_username = flow.identifier()["username"]
-    return "%s%s" % (
-        dma_username, 
+    backup_channel_name = gen_channel_name(
+        flow,
         utils.DMA_BACKUP_CHANNEL_SUFFIX_NAME,
     )
+    backup_cid = create_channel(
+        flow, 
+        ldap_tid, 
+        backup_channel_name,
+        private=True,
+    )
+    log_channel_name = gen_channel_name(
+        flow,
+        utils.DMA_LOG_CHANNEL_SUFFIX_NAME,
+    )
+    log_cid = create_channel(
+        flow,
+        ldap_tid,
+        log_channel_name,
+        private=False,
+    )
+    test_channel_name = gen_channel_name(
+        flow,
+        utils.DMA_TEST_CHANNEL_SUFFIX_NAME,
+    )
+    test_cid = create_channel(
+        flow,
+        ldap_tid,
+        test_channel_name,
+        private=False,
+    )
+    return backup_cid, log_cid, test_cid
+    
 
-
-def create_backup_channel(flow, ldap_tid):
-    # Check for existence
-    account_id = flow.account_id()
-    backup_channel_name = gen_backup_channel_name(flow)
-    channels = flow.enumerate_channels(ldap_tid)
-    for channel in channels:
-        if channel["name"] == backup_channel_name:
-            members = flow.enumerate_channel_member_history(channel["id"])
-            if len(members) == 1 and \
-               members[0]["accountId"] == account_id:
-                backup_cid = channel["id"]
-                break
-    else:
-        # Does not exist, create it
-        backup_cid = flow.new_channel(
-            ldap_tid, 
-            backup_channel_name,
-        )
-    return backup_cid
-            
-
-def gen_log_channel_name(flow):
+def gen_channel_name(flow, suffix):
     dma_username = flow.identifier()["username"]
     return "%s%s" % (
-        dma_username, 
-        utils.DMA_LOG_CHANNEL_SUFFIX_NAME,
+        dma_username,
+        suffix,
     )
 
 
-def create_log_channel(flow, ldap_tid):
-    # Check for existence
+def create_channel(flow, tid, channel_name, private):
     account_id = flow.account_id()
-    log_channel_name = gen_log_channel_name(flow)
-    channels = flow.enumerate_channels(ldap_tid)
+    channels = flow.enumerate_channels(tid)
+    # Check for existence
     for channel in channels:
-        if channel["name"] == log_channel_name:
+        if channel["name"] == channel_name:
             members = flow.enumerate_channel_member_history(channel["id"])
             member = members[-1]
-            if member["accountId"] == account_id and \
-               member["state"] == "a":
-                log_cid = channel["id"]
-                break
+            if member["accountId"] == account_id and member["state"] == "a":
+                if not (private and len(members) != 1):
+                    cid = channel["id"]
+                    break
     else:
         # Does not exist, create it
-        log_cid = flow.new_channel(
-            ldap_tid, 
-            log_channel_name,
+        cid = flow.new_channel(
+            tid, 
+            channel_name,
         )
-    return log_cid
-
+    return cid
+            
 
 def wait_for_sync(flow):
     sync_done = { "value": False }

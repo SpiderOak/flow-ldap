@@ -14,11 +14,9 @@ import logging
 import signal
 
 from src import utils
-from src import (
-    cli, 
-    server, 
-    api_gen,
-)
+from src.cli.cmd_cli import CmdCli
+from src.cli import api_gen
+from src.server import Server
 from src.log import app_log
 
 
@@ -26,10 +24,9 @@ LOG = logging.getLogger("semaphor-ldap")
 
 
 def run_cli(options):
-    """Run the Cli object."""
-    cli_obj = cli.Cli(options)
-    # For now let's throw Cli.run() to stdout
-    print("%s" % cli_obj.run())
+    """Run the CmdCli object."""
+    cli_obj = CmdCli(options)
+    cli_obj.run()
 
 
 def signal_handler(sig, frame):
@@ -48,11 +45,10 @@ def run_server(options):
     """Run the Server object."""
     server_obj = None
     try:
-        server_obj = server.Server(options)
+        server_obj = Server(options)
         server_obj.run()
     except Exception as exception:
         LOG.error("server execution failed with '%s'", exception)
-	raise
     finally:  # Also catches SystemExit
         if server_obj:
             server_obj.cleanup()

@@ -9,7 +9,7 @@ from shutil import copyfile
 
 from flow import Flow
 
-from src import utils
+from src import app_platform
 
 
 LOG = logging.getLogger("backup")
@@ -50,10 +50,10 @@ def restore(flow, ldap_tid, backup_cid):
         LOG.debug("no db backup available")
         return True
     last_backup_msg = msgs[0]
-    aids = last_backup_msg["attachment"]
+    attachments = last_backup_msg["attachments"]
     # we only store messages with attachments on the backup channel
-    assert(aids)
-    aid = aids[0]
+    assert(attachments)
+    aid = attachments[0]["id"]
     LOG.info("downloading last db backup")
     flow.start_attachment_download(
         aid,
@@ -73,7 +73,7 @@ def restore(flow, ldap_tid, backup_cid):
         download_error["value"] = notif_data["err"]
     flow.register_callback(
         Flow.DOWNLOAD_ERROR_NOTIFICATION,
-        process_error,
+        download_error_handler,
     )
     flow.process_one_notification(timeout_secs=None)
     download_error_value = download_error["value"]
@@ -85,7 +85,7 @@ def restore(flow, ldap_tid, backup_cid):
     LOG.info("last db backup downloaded successfully")
     backup_path = flow.stored_attachment_path(ldap_tid, aid)
     assert(backup_path)
-    local_db_path = utils.local_db_path(flow.identifier()["username"])
-    copyfile(backup_path, local_db_path)
+    local_db_filename = app_platform.local_db_path()
+    copyfile(backup_path, local_db_filename)
     LOG.info("last db backup restored successfully")
     return True

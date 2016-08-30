@@ -55,12 +55,12 @@ class UserAccountSetup(Action):
     def add_account_to_team_chans(self, account_id):
         cids = flow_util.get_prescribed_cids(
             self.ldap_sync.flow,
-            self.ldap_sync.ldap_tid,
+            self.ldap_sync.server.ldap_team_id,
         )
         flow_util.add_account_to_team_chans(
             self.ldap_sync.flow,
             account_id,
-            self.ldap_sync.ldap_tid,
+            self.ldap_sync.server.ldap_team_id,
             cids,
         )
         return True
@@ -115,7 +115,7 @@ class UserAccountSetup(Action):
             }
 
         # Create the entry on the local DB
-        result = self.ldap_sync.db.create_account(
+        result = self.ldap_sync.server.db.create_account(
             self.ldap_account,
             semaphor_data,
         )
@@ -147,7 +147,7 @@ class UpdateLock(Action):
             )
             return False
         # Update the database with the new 'enabled' state
-        return self.ldap_sync.db.update_lock(self.ldap_account)
+        return self.ldap_sync.server.db.update_lock(self.ldap_account)
 
 
 class TryUserAccountSetup(UserAccountSetup):
@@ -190,21 +190,8 @@ class TryUserAccountSetup(UserAccountSetup):
             "state": local_db.UNLOCK,
         }
 
-        result = self.ldap_sync.db.update_semaphor_account(
+        result = self.ldap_sync.server.db.update_semaphor_account(
             username,
             semaphor_data,
         )
         return self.add_account_to_team_chans(semaphor_data["id"])
-
-
-class UpdateLDAPData(Action):
-    """Update LDAP data on the local DB.
-    In the future, this will send a profile update to Semaphor.
-    """
-
-    def execute(self):
-        """Updates the firstname and lastname on the local DB."""
-        result = self.ldap_sync.db.update_uid_and_enable(
-            self.ldap_account,
-        )
-        return result

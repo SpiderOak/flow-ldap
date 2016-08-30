@@ -16,9 +16,8 @@ LOG = logging.getLogger("chan_handler")
 class ChannelMemberEventHandler(object):
 
     def __init__(self, server):
+        self.server = server
         self.flow = server.flow
-        self.db = server.db
-        self.ldap_tid = server.ldap_team_id
         self.notif_types = [Flow.CHANNEL_MEMBER_NOTIFICATION]
 
     def callback(self, _notif_type, notif_data):
@@ -26,10 +25,10 @@ class ChannelMemberEventHandler(object):
         for cme in notif_data:
             if account_id == cme["accountId"] and \
                cme["state"] == "a":
-                accounts = self.db.get_ldaped_accounts()
+                accounts = self.server.db.get_ldaped_accounts()
                 flow_util.rescan_accounts_on_channel(
                     self.flow,
-                    self.ldap_tid,
+                    self.server.ldap_team_id,
                     cme["channelId"],
                     accounts,
                 )

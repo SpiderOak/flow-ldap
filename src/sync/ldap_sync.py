@@ -19,13 +19,12 @@ class LDAPSync(object):
     """Runs the LDAP sync operation."""
 
     def __init__(self, server):
+        self.server = server
         self.flow = server.flow
         self.ldap_factory = server.ldap_factory
-        self.db = server.db
         self.config = server.config
-        self.ldap_tid = server.ldap_team_id
         self.config = server.config
-        self.sync_on = server.sync_on
+        self.sync_on = server.ldap_sync_on
         self.flow_ready = server.flow_ready
 
     def get_ldap_userlist(self):
@@ -36,6 +35,7 @@ class LDAPSync(object):
         group_users = group.userlist()
         excluded_accounts = self.config.get_list("excluded-accounts")
         users = [user for user in group_users if user["email"] not in excluded_accounts]
+        ldap_conn.close()
         return users
 
     def changes_into_actions(self, delta_changes):
@@ -44,7 +44,6 @@ class LDAPSync(object):
             "setup": action.UserAccountSetup,
             "update_lock": action.UpdateLock,
             "retry_setup": action.TryUserAccountSetup,
-            "update_ldap_data": action.UpdateLDAPData,
         }
         actions = []
         for action_label, entries in delta_changes.iteritems():
@@ -59,13 +58,18 @@ class LDAPSync(object):
             if not success:
                 LOG.error("action %s execution failed", action)
 
-    def run(self):
-        """Runs the actual LDAP sync operation."""
-        if not self.sync_on.is_set():
-            LOG.info("sync disabled, skip run")
-            return
+    def pre_checks(self):
         if not self.flow_ready.is_set():
             LOG.info("flow not ready, skip run")
+            return False
+        if not self.sync_on.is_set():
+            LOG.info("sync disabled, skip run")
+            return False
+        return True
+
+    def run(self):
+        """Runs the actual LDAP sync operation."""
+        if not self.pre_checks():
             return
         LOG.debug("start")
         try:
@@ -74,7 +78,7 @@ class LDAPSync(object):
             LOG.error("Failed to get ldap userlist: '%s'", str(exception))
             return
         LOG.debug("ldap accounts: %s", ldap_accounts)
-        delta_changes = self.db.delta(ldap_accounts)
+        delta_changes = self.server.db.delta(ldap_accounts)
         actions = self.changes_into_actions(delta_changes)
         LOG.debug("actions to execute: %s", actions)
         self.execute_actions(actions)

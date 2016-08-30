@@ -1,7 +1,7 @@
 """
-cli.py
+cmd_cli.py
 
-CLI mode source code.
+Command line client mode.
 """
 
 import os
@@ -13,26 +13,19 @@ import requests
 
 from src import (
     utils, 
-    http, 
     app_platform,
 )
+from src.http.http_api import HttpApi
 from src.log import app_log
+import cmd_method
 
 
-LOG = logging.getLogger("cli")
+LOG = logging.getLogger("cmd_cli")
 
 
-class RequestError(Exception):
-    """Raised when there's an 'error' in the Server response."""
-    pass
-
-
-class Cli(object):
-    """Runs the cli mode for this application.
-    The cli mode executes JSON-RPC requests to the server
-    and returns the 'result' to the user.
-    If 'error' is not empty in the response,
-    it raises a RequestError exception.
+class CmdCli(object):
+    """Runs the command line cli mode for this application.
+    The cli mode executes JSON-RPC requests to the server.
     """
 
     def __init__(self, options):
@@ -74,39 +67,45 @@ class Cli(object):
             "jsonrpc": "2.0",
         }
         LOG.debug("request: %s", payload)
+        method_obj = cmd_method.get_cmd_method(method)
+        method_obj.request(args_dict)
         try:
             response = requests.post(
                 self.server_uri,
                 data=json.dumps(payload),
-                headers=headers
+                headers=headers,
+                timeout=30,
             )
-            response_data = json.loads(response.text, encoding='utf-8')
-            LOG.debug("response: %s", response_data)
-            if self.request_id != response_data.get("id"):
-                raise RequestError(
-                    "Request/Response id do not match (%s,%s)" % (
-                        self.request_id,
-                        response_data.get("id"),
-                    ),
-                )
-            self.request_id += 1
-            if "error" in response_data:
-                raise RequestError(response_data["error"])
-        except Exception as excep:
-            return "Request error: '%s'" % str(excep)
-        return response_data["result"]
+            LOG.debug("response: %s", response.text)
+        except requests.RequestException as req_err:
+            LOG.debug("Connection error: %s", req_err)
+            print "ERROR: Failed to send request to the server"
+            return
+        try:
+            response_data = json.loads(response.text, encoding="utf-8")
+        except ValueError as val_err:
+            print "Invalid response: '%s'" % val_err
+            return
+        if self.request_id != response_data.get("id"):
+            print (
+                "Invalid response, request/response ids do not match (%s,%s)" % (
+                    self.request_id,
+                    response_data.get("id"),
+                ),
+            )
+            return
+        self.request_id += 1
+        method_obj.response(response_data)
 
     def run(self):
-        """Cli command execution.
+        """CmdCli command execution.
         Returns the 'result' section from the JSON-RPC Server response.
-        If there's an 'error' in the Server response,
-        a RequestError is raised.
         """
-        response = None
-        if self.options.api:
-            api_name = self.options.api.replace("-", "_")
-            args_list = http.HttpApi.get_api_args(api_name)
-            args_dict = {key: getattr(self.options, key)
-                         for key in args_list}
-            response = self.run_method(self.options.api, args_dict)
-        return response
+        assert(self.options.api)
+        api_name = self.options.api.replace("-", "_")
+        args_list = HttpApi.get_api_args(api_name)
+        args_dict = {
+            key: getattr(self.options, key)
+            for key in args_list
+        }
+        self.run_method(self.options.api, args_dict)

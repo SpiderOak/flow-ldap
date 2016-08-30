@@ -8,7 +8,6 @@ import threading
 import logging
 from ConfigParser import RawConfigParser
 import StringIO
-import copy
 
 from src import utils
 
@@ -18,7 +17,6 @@ _DEFAULT_CONFIG = """
 [%s]
 ########################################
 # Generic
-listen-address = localhost
 listen-port = 8080
 db-backup-minutes = 60
 ldap-sync-minutes = 60
@@ -36,19 +34,19 @@ group-dn = ou=People,dc=domain,dc=com
 server-type = AD
 dir-member-source = member
 dir-username-source = userPrincipalName
-dir-fname-source = givenName
-dir-lname-source = sn
 dir-guid-source = objectGUID
 dir-auth-source = dn
 """ % (
     utils.SERVER_CONFIG_SECTION,
 )
-LDAP_VARIABLES = [
+LDAP_VARIABLES = set([
     "uri", "base-dn", "admin-user", "admin-pw", "group-dn", 
     "server-type", "dir-member-source", "dir-username-source", 
-    "dir-fname-source", "dir-lname-source", "dir-guid-source", 
-    "dir-auth-source",
-]
+    "dir-guid-source", "dir-auth-source",
+])
+_LDAP_CONFIG_GROUP_NAME = "LDAP Config"
+_SERVER_CONFIG_GROUP_NAME = "Server Config"
+
 
 
 def create_config_file(config_file_path):
@@ -100,13 +98,21 @@ class ServerConfig(object):
 
     def get_key_values(self):
         self.lock.acquire()
-        cfg_dict = copy.deepcopy(self.config_dict)
+        ret_config_dict = {
+            _SERVER_CONFIG_GROUP_NAME: {},
+            _LDAP_CONFIG_GROUP_NAME: {},
+        }
+        for key, value in self.config_dict.items():
+            if key in LDAP_VARIABLES:
+                ret_config_dict[_LDAP_CONFIG_GROUP_NAME][key] = value
+            else:
+                ret_config_dict[_SERVER_CONFIG_GROUP_NAME][key] = value
         self.lock.release()
-        return cfg_dict
+        return ret_config_dict
 
-    def register_callback(self, variables, trigger_func):
+    def register_callback(self, variables_iter, trigger_func):
         self.lock.acquire()
-        for variable in variables:
+        for variable in variables_iter:
             self.trigger_callbacks[variable] = trigger_func
         self.lock.release()
 

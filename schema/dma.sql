@@ -6,9 +6,6 @@ create table if not exists ldap_account (
     uniqueid varchar(128) not null,
     /* LDAP email/username */
     email varchar(255) not null,
-    /* LDAP first and last name */
-    firstname varchar(255),
-    lastname varchar(255),
     /* LDAP state, which maps to an unlock and full_lock on the Semaphor side */
     enabled boolean not null default true,
 
