@@ -17,7 +17,6 @@ from src import utils
 from src.cli.cmd_cli import CmdCli
 from src.cli import api_gen
 from src.server import Server
-from src.log import app_log
 
 
 LOG = logging.getLogger("semaphor-ldap")
@@ -49,6 +48,7 @@ def run_server(options):
         server_obj.run()
     except Exception as exception:
         LOG.error("server execution failed with '%s'", exception)
+        raise  # TODO REMOVE
     finally:  # Also catches SystemExit
         if server_obj:
             server_obj.cleanup()
@@ -86,7 +86,8 @@ def parse_options(argv):
     cli_parser.set_defaults(server_mode=False)
 
     # Add API methods
-    cli_subparsers = cli_parser.add_subparsers(title="Commands", metavar="{API COMMAND FROM THE LIST}")
+    cli_subparsers = cli_parser.add_subparsers(
+        title="Commands", metavar="{API COMMAND FROM THE LIST}")
     api_gen.add_api_methods(cli_subparsers)
 
     options = parser.parse_args(argv[1:])

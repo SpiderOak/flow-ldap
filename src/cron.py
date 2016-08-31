@@ -33,6 +33,11 @@ class Cron(threading.Thread):
         If minutes=0 then the task is disabled.
         - task_func : function object with the operation to run.
         """
+        LOG.debug(
+            "updating task frequency to %d minutes for '%s()'",
+            minutes,
+            task_function.__name__,
+        )
         # If existing job, then cancel it
         jobs = [job for job in schedule.jobs if job.job_func.func == task_function]
         if len(jobs) == 1:

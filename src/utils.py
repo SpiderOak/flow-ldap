@@ -4,10 +4,6 @@ utils.py
 Utilities and definitions for semaphor-ldap
 """
 
-import sys
-import os
-
-
 VERSION = "0.1"
 
 AUTOCONNECT_CONFIG_FILE_NAME = "server-auto-connect.cfg"
@@ -16,8 +12,6 @@ AUTOCONNECT_CONFIG_SECTION = "Semaphor LDAP Server"
 SERVER_CONFIG_SECTION = AUTOCONNECT_CONFIG_SECTION
 LOCAL_SERVER_HOST = "127.0.0.1"
 SERVER_JSON_RPC_URL_PATH = "rpc"
-
-SYNC_CONFIG_FREQ_MINUTES = 1
 
 DMA_BACKUP_CHANNEL_SUFFIX_NAME = "-Backup"
 DMA_LOG_CHANNEL_SUFFIX_NAME = "-Log"
@@ -28,6 +22,8 @@ DEFAULT_FLOW_SERVICE_PORT = "443"
 DEFAULT_FLOW_SERVICE_USE_TLS = "true"
 
 FLOW_API_TIMEOUT = 15
+
+URI_FINGERPRINT = "semaphor://enterprise-sign-in/%(fp)s"
 
 
 def raw_config_as_dict(config):

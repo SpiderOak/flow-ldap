@@ -1,7 +1,7 @@
 """
 server_config.py
 
-Config file functionality for semaphor-ldap server. 
+Config file functionality for semaphor-ldap server.
 """
 
 import threading
@@ -20,7 +20,7 @@ _DEFAULT_CONFIG = """
 listen-port = 8080
 db-backup-minutes = 60
 ldap-sync-minutes = 60
-excluded-accounts = 
+excluded-accounts =
 ldap-sync-on = no
 ########################################
 # LDAP
@@ -40,13 +40,12 @@ dir-auth-source = dn
     utils.SERVER_CONFIG_SECTION,
 )
 LDAP_VARIABLES = set([
-    "uri", "base-dn", "admin-user", "admin-pw", "group-dn", 
-    "server-type", "dir-member-source", "dir-username-source", 
+    "uri", "base-dn", "admin-user", "admin-pw", "group-dn",
+    "server-type", "dir-member-source", "dir-username-source",
     "dir-guid-source", "dir-auth-source",
 ])
 _LDAP_CONFIG_GROUP_NAME = "LDAP Config"
 _SERVER_CONFIG_GROUP_NAME = "Server Config"
-
 
 
 def create_config_file(config_file_path):
@@ -129,7 +128,7 @@ class ServerConfig(object):
         if key not in self.config_dict:
             self.lock.release()
             raise Exception("'%s' not a valid config variable" % key)
-        self.config_dict.update({key:value})
+        self.config_dict.update({key: value})
         trigger_func = self.trigger_callbacks.get(key)
         self.store_config()
         self.lock.release()

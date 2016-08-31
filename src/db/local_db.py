@@ -25,7 +25,6 @@ class LocalDB(object):
     """Encapsulates semaphor-ldap local DB operations."""
 
     def __init__(self, schema_file_name):
-        self.schema_file_name = schema_file_name
         self.db_file_name = app_platform.local_db_path()
         LOG.debug("using '%s' database", self.db_file_name)
         db_conn = self._get_connection()
@@ -51,9 +50,9 @@ class LocalDB(object):
         cur = db_conn.cursor()
         cur.execute(
             """select lg.uniqueid, lg.email, lg.enabled
-            from ldap_group lg 
-            left join ldap_account la on lg.uniqueid = la.uniqueid 
-            where lg.enabled and la.uniqueid is null and 
+            from ldap_group lg
+            left join ldap_account la on lg.uniqueid = la.uniqueid
+            where lg.enabled and la.uniqueid is null and
             not exists(select 1 from ldap_account where email = lg.email)
             """,
         )
@@ -71,8 +70,8 @@ class LocalDB(object):
         cur = db_conn.cursor()
         cur.execute(
             """select lg.uniqueid, lg.email, lg.enabled
-            from ldap_group lg 
-            left join ldap_account la on lg.uniqueid = la.uniqueid 
+            from ldap_group lg
+            left join ldap_account la on lg.uniqueid = la.uniqueid
             left join semaphor_account sa on la.id = sa.ldap_account
             where lg.enabled and sa.state = 2
             """,
@@ -82,7 +81,7 @@ class LocalDB(object):
         return accounts
 
     def entries_to_update_lock(self, db_conn):
-        """Get accounts that the bot controls (ldaped) and should 
+        """Get accounts that the bot controls (ldaped) and should
         be 'full lock'ed or unlocked from 'full lock'.
         """
         cur = db_conn.cursor()
@@ -94,37 +93,19 @@ class LocalDB(object):
             left join ldap_account la on lg.uniqueid = la.uniqueid
             left join semaphor_account sa on la.id = sa.ldap_account
             where (sa.state = 1 or sa.state = 3) and
-            ((not lg.enabled and la.enabled) or 
+            ((not lg.enabled and la.enabled) or
              (lg.enabled and not la.enabled))
 
             union
 
             /* ldaped accounts not present in ldap but present in our db
-             * and currently enabled 
+             * and currently enabled
              */
             select la.uniqueid as uniqueid, la.email as email, 0 as enabled
             from ldap_account la
             left join ldap_group lg on la.uniqueid = lg.uniqueid
             left join semaphor_account sa on la.id = sa.ldap_account
             where la.enabled != 0 and sa.state = 1 and lg.uniqueid is null
-            """,
-        )
-        accounts = cur.fetchall()
-        cur.close()
-        return accounts
-
-    def entries_to_update_uid_enabled(self, db_conn):
-        """Get accounts that the bot controls (ldaped) and should 
-        be 'full lock'ed or unlocked from 'full lock'.
-        """
-        cur = db_conn.cursor()
-        cur.execute(
-            """/* accounts that reappeared on ldap and are disabled on our db */
-            select lg.uniqueid as uniqueid, lg.email as email,
-            lg.enabled as ldap_enabled, la.enabled as db_enabled
-            from ldap_group lg
-            left join ldap_account la on lg.email = la.email
-            where lg.uniqueid != la.uniqueid
             """,
         )
         accounts = cur.fetchall()
@@ -147,9 +128,9 @@ class LocalDB(object):
         ]
         cur.executemany(
             """update ldap_account
-            set uniqueid = ? 
+            set uniqueid = ?
             where email = ?
-            """, 
+            """,
             accounts_values,
         )
         cur.close()
@@ -160,18 +141,18 @@ class LocalDB(object):
         # Create temporary tables with retrieved ldap info
         cur.execute(
             """/* Create a temp table w/ same cols as ldap_account */
-            create temporary table ldap_group 
+            create temporary table ldap_group
             as select * from ldap_account where 0
             """,
         )
         ldap_account_values = [
             (ldap_account["uniqueid"], ldap_account["email"],
-             ldap_account["enabled"]) 
+             ldap_account["enabled"])
             for ldap_account in ldap_accounts
         ]
         cur.executemany(
             """insert into ldap_group
-            (uniqueid, email, enabled) 
+            (uniqueid, email, enabled)
             values (?, ?, ?)
             """,
             ldap_account_values,
@@ -201,26 +182,26 @@ class LocalDB(object):
         ldap_data_values = (
             ldap_data["uniqueid"], ldap_data["email"],
             ldap_data["enabled"],
-        ) 
+        )
         cur.execute(
-            """insert into ldap_account 
-            (uniqueid, email, enabled) 
+            """insert into ldap_account
+            (uniqueid, email, enabled)
             values (?, ?, ?)
-            """, 
+            """,
             ldap_data_values,
         )
         # Create entry on the semaphor_account table
         semaphor_data_values = (
-            cur.lastrowid, 
+            cur.lastrowid,
             semaphor_data.get("id"),
-            semaphor_data.get("password"), 
+            semaphor_data.get("password"),
             semaphor_data.get("level2_secret"),
             semaphor_data.get("state"),
-        ) 
+        )
         cur.execute(
             """insert into semaphor_account
             (ldap_account, semaphor_guid, password, L2, state)
-            values 
+            values
             (?, ?, ?, ?, ?)
             """,
             semaphor_data_values,
@@ -228,7 +209,7 @@ class LocalDB(object):
         db_conn.commit()
         db_conn.close()
         return True
-        
+
     def get_account(self, username):
         """Get all available local DB data of the given username."""
         db_conn = self._get_connection()
@@ -239,7 +220,7 @@ class LocalDB(object):
         )
         ldap_account = cur.fetchone()
         cur.execute(
-            """select semaphor_guid, password, L2, state 
+            """select semaphor_guid, password, L2, state
             from semaphor_account
             where ldap_account = ?
             """,
@@ -259,17 +240,17 @@ class LocalDB(object):
         cur.execute(
             "select id from ldap_account where email = ?",
             (username,),
-        ) 
+        )
         ldap_account_id = cur.fetchone()
         if not ldap_account_id:
             LOG.error(
-                "username '%s' not found on DB", 
+                "username '%s' not found on DB",
                 username,
             )
             return False
         cur.execute(
-            """update semaphor_account 
-            set semaphor_guid = ?, password = ?, L2 = ?, state = ? 
+            """update semaphor_account
+            set semaphor_guid = ?, password = ?, L2 = ?, state = ?
             where ldap_account = ?
             """, (
                 semaphor_data["semaphor_guid"],
@@ -288,10 +269,10 @@ class LocalDB(object):
         cur = db_conn.cursor()
         cur.execute(
             """update ldap_account
-            set enabled = ? 
+            set enabled = ?
             where uniqueid = ?
             """, (
-                ldap_account["enabled"], 
+                ldap_account["enabled"],
                 ldap_account["uniqueid"],
             ),
         )

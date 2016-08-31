@@ -12,8 +12,6 @@ from werkzeug.exceptions import HTTPException
 from werkzeug.wrappers import Request, Response
 from werkzeug.datastructures import Headers
 from jsonrpc import JSONRPCResponseManager, dispatcher
-from jsonrpc.jsonrpc2 import JSONRPC20Response
-from jsonrpc.exceptions import JSONRPCInvalidRequest
 
 from src import utils
 from http_api import HttpApi
@@ -63,7 +61,7 @@ class HTTPRequestHandler(object):
            not hmac.compare_digest(auth_token, self.auth_token):
             return Response("Invalid Request", status=404)
         rpc_response = JSONRPCResponseManager.handle(
-            request.data, 
+            request.data,
             dispatcher,
         )
         return Response(rpc_response.json, mimetype="application/json")

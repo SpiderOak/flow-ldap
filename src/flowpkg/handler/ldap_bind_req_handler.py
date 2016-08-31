@@ -9,7 +9,7 @@ import logging
 
 from flow import Flow
 
-from src.db import local_db 
+from src.db import local_db
 from src.flowpkg import flow_util
 
 
@@ -19,10 +19,8 @@ LOG = logging.getLogger("ldap_bind_req_handler")
 class LDAPBindRequestHandler(object):
     """Runs the LDAP auth/bind request handler."""
 
-    def __init__(self, server):
-        self.server = server
-        self.flow = server.flow
-        self.ldap_factory = server.ldap_factory
+    def __init__(self, dma_manager):
+        self.dma_manager = dma_manager
         self.notif_types = [Flow.LDAP_BIND_REQUEST_NOTIFICATION]
 
     def callback(self, _notif_type, notif_data):
@@ -39,10 +37,10 @@ class LDAPBindProcessor(threading.Thread):
 
     def __init__(self, ldap_bind_handler, notif_data):
         super(LDAPBindProcessor, self).__init__()
-        self.flow = ldap_bind_handler.flow
-        self.ldap_factory = ldap_bind_handler.ldap_factory
-        self.db = ldap_bind_handler.server.db
-        self.ldap_tid = ldap_bind_handler.server.ldap_team_id
+        self.flow = ldap_bind_handler.dma_manager.flow
+        self.ldap_factory = ldap_bind_handler.dma_manager.ldap_factory
+        self.db = ldap_bind_handler.dma_manager.db
+        self.ldap_tid = ldap_bind_handler.dma_manager.ldap_team_id
         self.notif_data = notif_data
 
     def run(self):
@@ -57,21 +55,21 @@ class LDAPBindProcessor(threading.Thread):
             return
         if self.notif_data["level2Secret"]:
             self.process_link_request(
-                self.notif_data, 
+                self.notif_data,
                 account_entry,
             )
         else:
             self.process_create_ldap_device_request(
-                self.notif_data, 
+                self.notif_data,
                 account_entry,
             )
 
     def process_link_request(self, notif_data, account_entry):
         """It executes the link request, which involves:
         1. Bind against LDAP server, if successful, then
-        2. Execute flow operation to link account to LDAP, 
+        2. Execute flow operation to link account to LDAP,
         if successful, then
-        3. Update DB, marking the account as LDAPed and store 
+        3. Update DB, marking the account as LDAPed and store
         generated password and L2.
         (via link_ldap_account API).
         """
@@ -108,7 +106,7 @@ class LDAPBindProcessor(threading.Thread):
         self.db.update_semaphor_account(username, semaphor_data)
         # Add account to LDAP team and prescribed channels
         prescr_cids = flow_util.get_prescribed_cids(
-            self.flow, 
+            self.flow,
             self.ldap_tid,
         )
         flow_util.add_account_to_team_chans(
@@ -118,13 +116,13 @@ class LDAPBindProcessor(threading.Thread):
             prescr_cids,
         )
 
-    def process_create_ldap_device_request(self, 
-                                           notif_data, 
+    def process_create_ldap_device_request(self,
+                                           notif_data,
                                            account_entry):
         """The following is executed:
         1. Bind against LDAP server, if successful, then
         2. Get user's L2 from the DB, if successful, then
-        3. Send L2 to the server to allow the device creation 
+        3. Send L2 to the server to allow the device creation
         (via ldap_bind_response API).
         """
         username = notif_data["username"]

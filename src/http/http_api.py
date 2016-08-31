@@ -8,7 +8,6 @@ import logging
 import inspect
 
 from src.log import app_log
-from src.flowpkg import flow_setup
 
 
 LOG = logging.getLogger("http_api")
@@ -36,7 +35,7 @@ class HttpApi(object):
     def __init__(self, server, http_server):
         self.server = server
         self.ldap_factory = self.server.ldap_factory
-        self.flow = self.server.flow
+        self.dma_manager = self.server.dma_manager
         self.http_server = http_server
 
     def create_account(self, dmk):
@@ -48,7 +47,7 @@ class HttpApi(object):
         if not dmk:
             raise Exception("Empty dmk.")
         try:
-            response = flow_setup.create_dma_account(self.server, dmk)
+            response = self.dma_manager.create_dma_account(dmk)
         except Exception as exception:
             # Needed because json cannot handle requests.RequestException
             raise Exception(str(exception))
@@ -62,7 +61,7 @@ class HttpApi(object):
         """
         if not username or not recovery_key:
             raise Exception("Empty username/recovery key")
-        response = flow_setup.create_device(self.server, username, recovery_key)
+        self.dma_manager.create_device(username, recovery_key)
         return "null"
 
     def group_userlist(self):
@@ -111,7 +110,7 @@ class HttpApi(object):
         else:
             db_state = "OK"
         try:
-            self.server.check_flow_connection()
+            self.dma_manager.check_flow_connection()
         except Exception as exception:
             flow_state = "ERROR: %s" % str(exception)
         else:
@@ -132,7 +131,7 @@ class HttpApi(object):
 
     def dma_fingerprint(self):
         """Returns the DMA fingerprint."""
-        return self.server.get_dma_fingerprint()
+        return self.dma_manager.get_dma_fingerprint()
 
     def db_userlist(self):
         """Returns all the accounts on the local DB."""

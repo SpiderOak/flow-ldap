@@ -12,7 +12,7 @@ import json
 import requests
 
 from src import (
-    utils, 
+    utils,
     app_platform,
 )
 from src.http.http_api import HttpApi

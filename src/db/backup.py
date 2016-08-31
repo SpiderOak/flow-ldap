@@ -27,7 +27,7 @@ def run(db, flow, ldap_tid, backup_cid):
         aid = flow.new_attachment(
             ldap_tid,
             backup_filename,
-        ) 
+        )
         # send the attachment to the backup channel
         flow.send_message(
             ldap_tid,
@@ -48,7 +48,7 @@ def restore(flow, ldap_tid, backup_cid):
     if not msgs:
         # no backup available
         LOG.debug("no db backup available")
-        return True
+        return
     last_backup_msg = msgs[0]
     attachments = last_backup_msg["attachments"]
     # we only store messages with attachments on the backup channel
@@ -62,13 +62,15 @@ def restore(flow, ldap_tid, backup_cid):
         last_backup_msg["id"],
     )
     # wait until download is done
-    download_error = { "value": None }
+    download_error = {"value": None}
+
     def download_complete_handler(notif_type, notif_data):
         pass
     flow.register_callback(
         Flow.DOWNLOAD_COMPLETE_NOTIFICATION,
         download_complete_handler,
     )
+
     def download_error_handler(notif_type, notif_data):
         download_error["value"] = notif_data["err"]
     flow.register_callback(
@@ -81,11 +83,10 @@ def restore(flow, ldap_tid, backup_cid):
     flow.unregister_callback(Flow.DOWNLOAD_ERROR_NOTIFICATION)
     if download_error_value:
         LOG.error("db backup download failed: %s", download_error_value)
-        return False
+        raise Exception("backup download failed")
     LOG.info("last db backup downloaded successfully")
     backup_path = flow.stored_attachment_path(ldap_tid, aid)
     assert(backup_path)
     local_db_filename = app_platform.local_db_path()
     copyfile(backup_path, local_db_filename)
     LOG.info("last db backup restored successfully")
-    return True

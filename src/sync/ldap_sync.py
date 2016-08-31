@@ -1,16 +1,14 @@
 """
 ldap_sync.py
 
-LDAP sync operation. 
+LDAP sync operation.
 TODO: document here all that happens on a sync.
 """
 
 import logging
 
-import schedule
-
-from src import server_config
 import action
+
 
 LOG = logging.getLogger("ldap_sync")
 
@@ -20,12 +18,12 @@ class LDAPSync(object):
 
     def __init__(self, server):
         self.server = server
-        self.flow = server.flow
+        self.dma_manager = server.dma_manager
+        self.flow_ready = server.dma_manager.ready
+        self.flow = server.dma_manager.flow
         self.ldap_factory = server.ldap_factory
         self.config = server.config
-        self.config = server.config
         self.sync_on = server.ldap_sync_on
-        self.flow_ready = server.flow_ready
 
     def get_ldap_userlist(self):
         """Retrieves the LDAP user directory using the config group_dn."""
@@ -34,7 +32,8 @@ class LDAPSync(object):
         group = ldap_conn.get_group(group_dn)
         group_users = group.userlist()
         excluded_accounts = self.config.get_list("excluded-accounts")
-        users = [user for user in group_users if user["email"] not in excluded_accounts]
+        users = [user for user in group_users if user[
+            "email"] not in excluded_accounts]
         ldap_conn.close()
         return users
 
@@ -53,10 +52,10 @@ class LDAPSync(object):
 
     def execute_actions(self, actions):
         """Executes all the actions needed to comply with the LDAP sync."""
-        for action in actions:
-            success = action.execute()
+        for action_i in actions:
+            success = action_i.execute()
             if not success:
-                LOG.error("action %s execution failed", action)
+                LOG.error("action %s execution failed", action_i)
 
     def pre_checks(self):
         if not self.flow_ready.is_set():

@@ -6,8 +6,36 @@ Set of flow utility functions.
 
 import logging
 
+from flow import Flow
+
+from src import utils, app_platform
 
 LOG = logging.getLogger("flow_util")
+
+
+def create_flow_object(config):
+    flow_config = {
+        "host": config.get("flow-service-host") or
+        utils.DEFAULT_FLOW_SERVICE_HOST,
+        "port": config.get("flow-service-port") or
+        utils.DEFAULT_FLOW_SERVICE_PORT,
+        "use_tls": config.get("flow-service-use-tls") or
+        utils.DEFAULT_FLOW_SERVICE_USE_TLS,
+        "flowappglue": config.get("flowappglue") or
+        app_platform.get_default_flowappglue_path(),
+        "schema_dir": config.get("schema-dir") or
+        app_platform.get_default_backend_schema_path(),
+        "db_dir": app_platform.get_config_path(),
+        "glue_out_filename": app_platform.get_glue_out_filename(),
+        "attachment_dir": app_platform.get_default_attachment_path(),
+    }
+    flow_args = {
+        key: value for (key, value) in flow_config.items()
+        if value is not None
+    }
+    flow = Flow(**flow_args)
+    flow.set_api_timeout(utils.FLOW_API_TIMEOUT)
+    return flow
 
 
 def get_ldap_team_id(flow):
@@ -34,7 +62,7 @@ def is_member_of_ldap_team(flow):
     """Returns whether the DMA is member of the LDAP team.
     If it is, it also returns the team id.
     """
-    return get_ldap_team_id(flow) != None
+    return get_ldap_team_id(flow) is not None
 
 
 def is_channel_admin(flow, channel_id):
@@ -55,8 +83,8 @@ def add_admins_to_channel(flow, ldap_tid, cid):
     ldap_admins = [
         member["accountId"]
         for member in flow.enumerate_org_members(ldap_tid)
-        if member["state"] in ["a", "o"] and \
-           member["accountId"] != account_id
+        if member["state"] in ["a", "o"] and
+        member["accountId"] != account_id
     ]
     present_past_members = channel_present_past_members(flow, cid)
     admins_to_add = [
@@ -74,18 +102,18 @@ def add_admins_to_channel(flow, ldap_tid, cid):
 
 def channel_present_past_members(flow, cid):
     members = [
-        member["accountId"] \
-        for member in \
-            flow.enumerate_channel_member_history(cid)
+        member["accountId"]
+        for member in
+        flow.enumerate_channel_member_history(cid)
     ]
     return set(members)
 
 
 def team_present_members(flow, tid):
     members = [
-        member["accountId"] \
-        for member in \
-            flow.enumerate_org_members(tid)
+        member["accountId"]
+        for member in
+        flow.enumerate_org_members(tid)
     ]
     return set(members)
 
@@ -93,9 +121,9 @@ def team_present_members(flow, tid):
 def team_past_members(flow, tid):
     present_members = team_present_members(flow, tid)
     members = [
-        member["accountId"] \
-        for member in \
-            flow.enumerate_org_member_history(tid)
+        member["accountId"]
+        for member in
+        flow.enumerate_org_member_history(tid)
         if member["accountId"] not in present_members
     ]
     return set(members)
@@ -151,11 +179,11 @@ def get_prescribed_cids(flow, ldap_tid):
 
 def rescan_accounts_on_channel(flow, ldap_tid, cid, accounts):
     past_present_members = channel_present_past_members(
-        flow, 
+        flow,
         cid,
     )
     accounts_to_add = [
-        account_id for account_id in accounts \
+        account_id for account_id in accounts
         if account_id not in past_present_members
     ]
     for account_id in accounts_to_add:
@@ -170,7 +198,7 @@ def rescan_accounts_on_channel(flow, ldap_tid, cid, accounts):
 def rescan_accounts_on_channels(flow, db, ldap_tid, cids):
     if not cids or not db:
         return
-    accounts = db.get_ldaped_accounts() 
+    accounts = db.get_ldaped_accounts()
     if not accounts:
         return
     for cid in cids:

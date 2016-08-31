@@ -43,6 +43,7 @@ _DEFAULT_FLOWAPPGLUE_BINARY_PROD_NAME = "semaphor-backend%s" % _EXE_EXT
 
 SEMLDAP_CONFIGDIR_ENV_VAR = "SEMLDAP_CONFIGDIR"
 
+
 def _osx_app_path():
     """Returns the default application directory for OSX."""
     return _DEFAULT_APP_OSX_PATH
@@ -78,7 +79,7 @@ def get_default_backend_path():
     /Applications/Semaphor.app/Contents/Resources/app/schema.
     """
     return os.path.join(
-        _APP_OS_PATH_MAP[sys.platform](), 
+        _APP_OS_PATH_MAP[sys.platform](),
         _DEFAULT_BACKEND_DIR,
     )
 
@@ -98,14 +99,14 @@ def get_default_schema_path():
     return os.path.join(
         _APP_OS_PATH_MAP[sys.platform](),
         _DEFAULT_SCHEMA_DIR,
-	"dma.sql",
+        "dma.sql",
     )
 
 
 def get_default_img_path():
     return os.path.join(
         _APP_OS_PATH_MAP[sys.platform](),
-	"img",
+        "img",
     )
 
 
@@ -136,7 +137,7 @@ def get_default_attachment_path():
     $HOME/Library/Application Support/semaphor/downloads.
     """
     return os.path.join(
-        get_config_path(), 
+        get_config_path(),
         _DEFAULT_ATTACHMENT_DIR,
     )
 

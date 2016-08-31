@@ -28,7 +28,7 @@ class Action(object):
     def execute(self):
         """TODO"""
         LOG.error(
-            "%s: execute not implemented", 
+            "%s: execute not implemented",
             self.name(),
         )
         return False
@@ -43,24 +43,24 @@ class Action(object):
             str_repr += "ldap=%s" % row_str
         else:
             str_repr += "ldap=N/A"
-        str_repr += "}" 
+        str_repr += "}"
         return str_repr
-            
+
 
 class UserAccountSetup(Action):
-    """Action to create the account on the semaphor 
+    """Action to create the account on the semaphor
     service and update the database.
     """
 
     def add_account_to_team_chans(self, account_id):
         cids = flow_util.get_prescribed_cids(
             self.ldap_sync.flow,
-            self.ldap_sync.server.ldap_team_id,
+            self.ldap_sync.dma_manager.ldap_team_id,
         )
         flow_util.add_account_to_team_chans(
             self.ldap_sync.flow,
             account_id,
-            self.ldap_sync.server.ldap_team_id,
+            self.ldap_sync.dma_manager.ldap_team_id,
             cids,
         )
         return True
@@ -82,7 +82,7 @@ class UserAccountSetup(Action):
                 flow_account_exists = True
             else:
                 self.log.error(
-                    "setup_ldap_account(%s) failed: %s", 
+                    "setup_ldap_account(%s) failed: %s",
                     username,
                     flow_err,
                 )
@@ -94,7 +94,7 @@ class UserAccountSetup(Action):
                 self.ldap_sync.flow.set_account_lock(
                     username=username,
                     lock_type=Flow.LDAP_LOCK,
-                )        
+                )
             except Flow.FlowError as flow_err:
                 self.log.error(
                     "set_account_lock(%s) failed: %s",
@@ -115,7 +115,7 @@ class UserAccountSetup(Action):
             }
 
         # Create the entry on the local DB
-        result = self.ldap_sync.server.db.create_account(
+        self.ldap_sync.server.db.create_account(
             self.ldap_account,
             semaphor_data,
         )
@@ -126,9 +126,9 @@ class UserAccountSetup(Action):
             response = True
         return response
 
-        
+
 class UpdateLock(Action):
-    
+
     def execute(self):
         username = self.ldap_account["email"]
         lock_type = Flow.UNLOCK \
@@ -151,7 +151,7 @@ class UpdateLock(Action):
 
 
 class TryUserAccountSetup(UserAccountSetup):
-    """Action to retry the user account 
+    """Action to retry the user account
     setup for an 'ldap lock'ed account.
     If this succeeds then it means the user chose
     to change his Semaphor username.
@@ -175,7 +175,7 @@ class TryUserAccountSetup(UserAccountSetup):
                 return True
             else:
                 self.log.error(
-                    "setup_ldap_account(%s) failed: %s", 
+                    "setup_ldap_account(%s) failed: %s",
                     username,
                     flow_err,
                 )
@@ -190,7 +190,7 @@ class TryUserAccountSetup(UserAccountSetup):
             "state": local_db.UNLOCK,
         }
 
-        result = self.ldap_sync.server.db.update_semaphor_account(
+        self.ldap_sync.server.db.update_semaphor_account(
             username,
             semaphor_data,
         )

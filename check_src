@@ -5,8 +5,6 @@
 # usage to format files:
 # ./check --format
 
-SOURCES="*.py"
-
 command_exists () {
     type "$1" &>/dev/null ;
 }
@@ -14,14 +12,18 @@ command_exists () {
 execute() {
     if command_exists $1 ; then
             echo "Executing $1..."
-            $1 $SOURCES
+            $1 ./src
     else
-        echo "Skipping $1 (not installed)."
+        echo "Skipping $1, not installed."
     fi
 }
 
 if [ "$1" == "--format" ] ; then
-    execute "autopep8 -va --in-place --max-line-length 79"
+    if command_exists autopep8 ; then
+        find ./src -name "*.py" -exec autopep8 -va --in-place --max-line-length 79 {} \;
+    else
+        echo "Skipping autopep8, not installed."
+    fi
 else
     execute vulture
     execute pyflakes

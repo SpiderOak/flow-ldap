@@ -8,8 +8,6 @@ import logging
 import threading
 import Queue
 
-from flow import Flow
-
 
 class NotMemberLogChannelError(Exception):
     pass
@@ -32,12 +30,11 @@ class FlowLogChannelHandler(logging.Handler):
 
 
 class FlowRemoteLogger(threading.Thread):
-    
-    def __init__(self, server):
+
+    def __init__(self, dma_manager):
         super(FlowRemoteLogger, self).__init__()
-        self.server = server
-        self.flow = server.flow
-        self.flow_ready = server.flow_ready
+        self.dma_manager = dma_manager
+        self.flow = dma_manager.flow
         self.loop_logger = threading.Event()
         self.loop_logger.set()
         self.log_queue = Queue.Queue()
@@ -46,7 +43,7 @@ class FlowRemoteLogger(threading.Thread):
     def check_member(self, cid):
         members = [
             member["accountId"]
-            for member in 
+            for member in
             self.flow.enumerate_channel_members(cid)
         ]
         return self.flow.account_id() in members
@@ -55,7 +52,7 @@ class FlowRemoteLogger(threading.Thread):
         if self.log_queue.qsize() >= self.MAX_Q_SIZE:
             return
         self.log_queue.put(message)
-        
+
     def stop(self):
         """Finishes the execution of the LDAP sync thread."""
         self.loop_logger.clear()
@@ -64,12 +61,12 @@ class FlowRemoteLogger(threading.Thread):
         logger = logging.getLogger("flow_remote_logger")
         logger.debug("flow remote logger thread started")
         logger.debug("wait flow setup")
-        self.server.flow_ready.wait()
+        self.dma_manager.ready.wait()
         if not self.loop_logger.is_set():
             return
         logger.debug("flow ready start loop")
-        tid = self.server.ldap_team_id
-        cid = self.server.log_cid
+        tid = self.dma_manager.ldap_team_id
+        cid = self.dma_manager.log_cid
         if not self.check_member(cid):
             raise NotMemberLogChannelError(
                 "Not member of the specified channel",
@@ -86,6 +83,6 @@ class FlowRemoteLogger(threading.Thread):
                     message,
                     timeout=10,
                 )
-            except Flow.FlowError as flow_err:
-                pass
+            except:
+                logger.debug("send_message to log channel failed")
         logger.debug("flow remote logger thread finished")

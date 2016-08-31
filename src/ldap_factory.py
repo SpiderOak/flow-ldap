@@ -7,8 +7,6 @@ ldap_factory.py
 import logging
 import threading
 
-import ldap
-
 import ldap_reader
 
 
@@ -16,7 +14,7 @@ LOG = logging.getLogger("ldap_factory")
 
 
 class LDAPFactory(object):
-    
+
     def __init__(self, config):
         self.lock = threading.Lock()
         self.config = config

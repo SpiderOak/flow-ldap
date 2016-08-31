@@ -35,7 +35,7 @@ class HTTPServer(object):
         try:
             self.wsgi_server = ThreadedWSGIServer(
                 utils.LOCAL_SERVER_HOST,
-                self.listen_port, 
+                self.listen_port,
                 app,
             )
         except Exception as exception:

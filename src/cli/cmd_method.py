@@ -4,8 +4,9 @@ cmd_method.py
 Command line method classes.
 """
 
-import sys
 import string
+
+from src import utils
 
 
 class CmdMethod(object):
@@ -19,7 +20,7 @@ class CmdMethod(object):
                 name += "-"
             name += c
         return name.lower()
-    
+
     @staticmethod
     def request(args_dict):
         pass
@@ -34,7 +35,7 @@ class CmdMethod(object):
                 if "message" in error_dict["data"]:
                     error_str = error_dict["data"]["message"]
         print("ERROR: %s" % error_str)
-        
+
     @staticmethod
     def result(result_dict):
         pass
@@ -47,7 +48,7 @@ class CmdMethod(object):
 
 
 class CheckStatus(CmdMethod):
-    
+
     @staticmethod
     def request(args_dict):
         print("Checking Semaphor-LDAP server status...")
@@ -55,17 +56,17 @@ class CheckStatus(CmdMethod):
     @staticmethod
     def result(result_dict):
         print("Server status:\n"
-              "- db = %s\n- flow = %s\n- ldap = %s\n- sync = %s" % ( 
-                result_dict["db"], 
-                result_dict["flow"], 
-                result_dict["ldap"],
-                result_dict["sync"],
-            )
-        )
+              "- db = %s\n- flow = %s\n- ldap = %s\n- sync = %s" % (
+                  result_dict["db"],
+                  result_dict["flow"],
+                  result_dict["ldap"],
+                  result_dict["sync"],
+              )
+              )
 
 
 class CreateAccount(CmdMethod):
-    
+
     @staticmethod
     def request(args_dict):
         print("Creating Directory Management Account...")
@@ -75,37 +76,30 @@ class CreateAccount(CmdMethod):
         print("The DMA account was created, please securely store the following credentials:\n"
               "- Username = %s\n- Recovery Key = %s\n"
               "A Team Join Request was sent to the LDAP Team = %s.\n"
-              "To finish the setup please accept the request and make the DMA an admin." % ( 
-                result_dict["username"], 
-                result_dict["password"], 
-                result_dict["orgId"],
-            )
-        )
+              "To finish the setup please accept the request and make the DMA an admin." % (
+                  result_dict["username"],
+                  result_dict["password"],
+                  result_dict["orgId"],
+              )
+              )
 
 
 class CreateDevice(CmdMethod):
-    
+
     @staticmethod
     def request(args_dict):
         print("Creating device for account '%s'..." % args_dict["username"])
 
 
 class ConfigSet(CmdMethod):
-    
+
     @staticmethod
     def request(args_dict):
-        print("Setting config '%s' to '%s'..." % (args_dict["key"], args_dict["value"]))
-
-
-class ConfigSet(CmdMethod):
-    
-    @staticmethod
-    def request(args_dict):
-        print("Setting config '%s' to '%s'..." % (args_dict["key"], args_dict["value"]))
+        print("Setting config '%s'..." % args_dict["key"])
 
 
 class ConfigList(CmdMethod):
-    
+
     @staticmethod
     def request(args_dict):
         print("Getting config list...")
@@ -119,7 +113,7 @@ class ConfigList(CmdMethod):
 
 
 class DmaFingerprint(CmdMethod):
-    
+
     @staticmethod
     def request(args_dict):
         print("Getting Directory Management Account fingerprint...")
@@ -127,11 +121,11 @@ class DmaFingerprint(CmdMethod):
     @staticmethod
     def result(result_dict):
         print("Fingerprint = %s" % result_dict)
-        print("URI = semaphor://enterprise-sign-in/%s" % result_dict)
+        print("URI = %s" % (utils.URI_FINGERPRINT % {"fp": result_dict}))
 
 
 class GroupUserlist(CmdMethod):
-    
+
     @staticmethod
     def request(args_dict):
         print("Getting list of accounts from the configured LDAP group...")
@@ -150,14 +144,14 @@ class GroupUserlist(CmdMethod):
 
 
 class LogDest(CmdMethod):
-    
+
     @staticmethod
     def request(args_dict):
         print("Setting log destination to %s..." % args_dict["target"])
 
 
 class DbUserlist(CmdMethod):
-    
+
     @staticmethod
     def request(args_dict):
         print("Retrieving users from the local database...")
@@ -175,7 +169,8 @@ class DbUserlist(CmdMethod):
                     user["uniqueid"],
                     "enabled" if user["enabled"] else "disabled",
                     user["semaphor_guid"],
-                    "ldaped" if user["state"] == 1 else ("ldap-locked" if user["state"] == 2 else "full-locked"),
+                    "ldaped" if user["state"] == 1 else (
+                        "ldap-locked" if user["state"] == 2 else "full-locked"),
                 )
             )
 

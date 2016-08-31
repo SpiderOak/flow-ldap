@@ -121,14 +121,18 @@ def setup_cli_logging(debug):
 def configure_flow_log(flow_remote_logger):
     """Configure logging errors into the log channel."""
     flow_log_handler = FlowLogChannelHandler(flow_remote_logger)
+
     class OnlyError(logging.Filter):
+
         def filter(self, record):
             return record.levelname == logging.ERROR
+
     class NotFlow(logging.Filter):
+
         def filter(self, record):
             return record.name != "flow"
-    flow_log_handler.addFilter(OnlyError()) 
-    flow_log_handler.addFilter(NotFlow()) 
+    flow_log_handler.addFilter(OnlyError())
+    flow_log_handler.addFilter(NotFlow())
     channel_formatter = logging.Formatter(
         "%(asctime)s %(name)s %(message)s",
     )
