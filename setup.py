@@ -1,22 +1,46 @@
+import sys
 import src.utils
-from setuptools import setup
+from setuptools import setup, find_packages
+try:
+    from pip.req import parse_requirements
+except ImportError:
+    print("The 'pip' package is needed for the setup")
+    exit(1)
 
-setup(name = "semaphor-ldap",
-      version = src.utils.VERSION,
-      packages = [ "src", "src/log", "src/db", "src/sync", "src/flowpkg", "src/flowpkg/handler" ],
-      entry_points = {
+reqs = parse_requirements("requirements/requirements.txt", session=False)
+install_requires = [str(ir.req) for ir in reqs]
+
+def set_win32_options(options):
+    try:
+        import py2exe
+    except ImportError:
+        print("The 'py2exe' package is needed for the setup")
+        exit(1)
+    options.update(
+        console = [{"script": "src/semaphor_ldap.py"}],
+    )
+
+setup_options = dict(
+    name = "semaphor-ldap",
+    version = src.utils.VERSION,
+    packages = find_packages(),
+    entry_points = {
         "console_scripts": [
-        "semaphor-ldap=src.semaphor_ldap:main",
+            "semaphor-ldap = src.semaphor_ldap:main",
         ],
-      },
-      # TODO: add "flow-python", "ldap-reader" as soon as
-      # they are available at PyPi
-      install_requires = [ "schedule" ],  
-      keywords = [ "spideroak", "semaphor", "ldap" ],
-      author = "Lucas Manuel Rodriguez",
-      author_email = "lucas@spideroak-inc.com",
-      description = "semaphor-ldap runs on " \
-                    "Customer Infrastructure " \
-                    "enabling the use of Semaphor with " \
-                    "Customer LDAP credentials.",
+    },
+    install_requires = install_requires, 
+    keywords = [ "spideroak", "semaphor", "ldap" ],
+    author = "SpiderOak Inc.",
+    author_email = "support@spideroak.com",
+    description = "semaphor-ldap runs on " \
+                  "Customer Infrastructure " \
+                  "enabling the use of Semaphor with " \
+                  "Customer LDAP credentials.",
 )
+
+if "py2exe" in sys.argv:
+    set_win32_options(options)
+
+print("Run setup")
+setup(**setup_options)
