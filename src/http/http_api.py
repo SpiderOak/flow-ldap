@@ -79,7 +79,7 @@ class HttpApi(object):
         """
         if target not in app_log.supported_log_destinations():
             raise Exception("Logging destination not supported on platform")
-        self.server.configure_logging(target)
+        self.server.config.set_key_value("log-dest", target)
         return "null"
 
     def config_list(self):

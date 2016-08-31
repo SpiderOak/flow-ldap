@@ -22,6 +22,8 @@ db-backup-minutes = 60
 ldap-sync-minutes = 60
 excluded-accounts =
 ldap-sync-on = no
+verbose = no
+log-dest =
 ########################################
 # LDAP
 uri = ldap://domain.com
@@ -116,6 +118,7 @@ class ServerConfig(object):
         self.lock.release()
 
     def store_config(self):
+        LOG.debug("storing config")
         cfg = RawConfigParser()
         cfg.add_section(utils.SERVER_CONFIG_SECTION)
         for key, value in self.config_dict.items():

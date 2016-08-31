@@ -40,7 +40,7 @@ setup_options = dict(
 )
 
 if "py2exe" in sys.argv:
-    set_win32_options(options)
+    set_win32_options(setup_options)
 
 print("Run setup")
 setup(**setup_options)

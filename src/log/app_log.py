@@ -7,12 +7,18 @@ Log configuration for the semaphor-ldap application.
 import sys
 import os
 import time
+import threading
 import logging
 import logging.handlers
 
-import src.app_platform
+from src import app_platform
 from src.log import console_handler
 from src.log.flow_log_channel_handler import FlowLogChannelHandler
+
+
+ROOT_LOGGER = logging.getLogger("")
+LOG_LOCK = threading.Lock()
+PLATFORM_HANDLERS = {}
 
 
 def supported_log_destinations():
@@ -30,7 +36,7 @@ def configured_syslog_handler():
     """Configures the builtin logging 'SysLogHandler' for Linux."""
     syslog_handler = logging.handlers.SysLogHandler("/dev/log")
     syslog_formatter = logging.Formatter(
-        "%(app_name)s[%(process)d]: %(name)s %(levelname)s %(message)s"
+        "%(app_name)s[%(process)d]: %(name)s %(levelname)s %(message)s",
     )
     syslog_handler.setFormatter(syslog_formatter)
 
@@ -48,12 +54,24 @@ def configured_syslog_handler():
 
 def configured_eventlog_handler():
     """Configures the builtin logging 'NTEventLogHandler' for Windows."""
-    return logging.NullHandler()
+    dllname = os.path.join(
+        os.path.dirname(sys.executable), 
+        "win32service.pyd",
+    )
+    event_handler = logging.handlers.NTEventLogHandler(
+        appname="Semaphor-LDAP-Server-Process",
+        dllname=dllname,
+    )  
+    event_handler_formatter = logging.Formatter(
+        "%(asctime)s %(name)s %(levelname)s %(message)s",
+    )
+    event_handler.setFormatter(event_handler_formatter)
+    return event_handler
 
 
 def configured_file_handler():
     """Configures the builtin logging 'FileHandler'."""
-    config_dir_path = src.app_platform.get_config_path()
+    config_dir_path = app_platform.get_config_path()
     log_file_name = os.path.join(
         config_dir_path,
         time.strftime("semaphor_ldap_%Y%m%d-%H%M%S.log"),
@@ -64,7 +82,7 @@ def configured_file_handler():
         backupCount=5,  # up to 5 rollover files
     )
     file_handler_formatter = logging.Formatter(
-        "%(asctime)s %(name)s %(levelname)s %(message)s"
+        "%(asctime)s %(name)s %(levelname)s %(message)s",
     )
     file_handler.setFormatter(file_handler_formatter)
     return file_handler
@@ -83,39 +101,56 @@ def configured_console_handler(detailed=True):
     return _console_handler
 
 
-def setup_common_logging(debug):
+def setup_common_logging():
     """Setup common logging configuration for the application."""
     # Do not show 'requests' lib INFO logs
     logging.getLogger("requests").setLevel(logging.WARNING)
-    # Configure flow-python log output
-    logging.getLogger("").setLevel(logging.DEBUG if debug else logging.INFO)
 
 
-def setup_server_logging(debug, destination):
+def get_platform_handlers():
+	supported = supported_log_destinations()
+	handlers = {}
+	for log_type in supported:
+		if log_type == "syslog":
+			handlers["syslog"] = configured_syslog_handler()
+		elif log_type == "event":
+			handlers["event"] = configured_eventlog_handler()
+		elif log_type == "file":
+			handlers["file"] = configured_file_handler()
+	return handlers
+
+
+def setup_server_logging():
+    setup_common_logging()
+    PLATFORM_HANDLERS.update(get_platform_handlers())
+
+
+def set_log_debug(enable=True):
+    ROOT_LOGGER.setLevel(logging.DEBUG if enable else logging.INFO)
+
+
+def set_log_destination(destination):
     """Setup logging configuration for the Server mode."""
-    setup_common_logging(debug)
-
-    if sys.platform == "linux2" and destination == "syslog":
-        logging_handler = configured_syslog_handler()
-    elif sys.platform == "win32" and destination == "event":
-        logging_handler = configured_eventlog_handler()
-    elif destination == "file":
-        logging_handler = configured_file_handler()
-    else:
-        logging_handler = logging.NullHandler()
-
-    logging.getLogger("").addHandler(logging_handler)
-
-    # We log to stdout too
-    _console_handler = configured_console_handler()
-    logging.getLogger("").addHandler(_console_handler)
+    LOG_LOCK.acquire()
+    try:
+        # Add handler only if supported on platform
+        if destination in PLATFORM_HANDLERS:
+            # Check if already configured
+            if PLATFORM_HANDLERS[destination] not in ROOT_LOGGER.handlers:
+                for _, plat_handler in PLATFORM_HANDLERS.items():
+                    if plat_handler in ROOT_LOGGER.handlers:
+                        ROOT_LOGGER.removeHandler(plat_handler)
+                ROOT_LOGGER.addHandler(PLATFORM_HANDLERS[destination])
+    finally:
+        LOG_LOCK.release()
 
 
 def setup_cli_logging(debug):
     """Setup logging configuration for the CLI mode."""
-    setup_common_logging(debug)
+    setup_common_logging()
+    set_log_debug(debug)
     _console_handler = configured_console_handler(detailed=False)
-    logging.getLogger("").addHandler(_console_handler)
+    ROOT_LOGGER.addHandler(_console_handler)
 
 
 def configure_flow_log(flow_remote_logger):
@@ -137,4 +172,4 @@ def configure_flow_log(flow_remote_logger):
         "%(asctime)s %(name)s %(message)s",
     )
     flow_log_handler.setFormatter(channel_formatter)
-    logging.getLogger("").addHandler(flow_log_handler)
+    ROOT_LOGGER.addHandler(flow_log_handler)

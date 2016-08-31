@@ -38,7 +38,6 @@ class Server(object):
     """Runs the server mode for this application."""
 
     def __init__(self, options):
-        self.debug = options.debug
         self.config = None
         self.dma_manager = None
         self.db = None
@@ -49,12 +48,11 @@ class Server(object):
         self.ldap_factory = None
         self.threads_running = False
         self.ldap_sync_on = threading.Event()
-        self.logging_destination = ""
 
         self.init_config_dir()
+        self.init_config(options)
         self.init_log()
         LOG.info("initializing semaphor-ldap server")
-        self.init_config(options)
         self.init_cron()
         self.init_ldap()
         self.init_db()
@@ -78,16 +76,34 @@ class Server(object):
         else:  # does not exist, create it
             os.mkdir(config_dir_path)
 
-    def configure_logging(self, destination):
-        """Configure logging destination for the server."""
-        self.logging_destination = destination
-        app_log.setup_server_logging(self.debug, self.logging_destination)
+    def set_log_dest(self):
+        log_dest = self.config.get("log-dest")
+        app_log.set_log_destination(log_dest)
+
+    def set_verbose(self):
+        verbose = self.config.get("verbose") == "yes"
+        app_log.set_log_debug(verbose)
 
     def init_log(self):
         """Initialize logging for the server."""
-        self.logging_destination = app_log.supported_log_destinations()[0]
-        app_log.setup_server_logging(self.debug, self.logging_destination)
-
+        app_log.setup_server_logging()
+        debug = self.config.get("verbose") == "yes" or False
+        app_log.set_log_debug(debug)
+        config_log_dest = self.config.get("log-dest")
+        logging_destination = config_log_dest or \
+            app_log.supported_log_destinations()[0]
+        app_log.set_log_destination(logging_destination)
+        if not config_log_dest:
+            self.config.set_key_value("log-dest", logging_destination)
+        self.config.register_callback(
+            ["log-dest"],
+            self.set_log_dest,
+        )
+        self.config.register_callback(
+            ["verbose"],
+            self.set_verbose,
+        )
+		
     def init_db(self):
         """Initializes the db object"""
         LOG.debug("initializing db")
@@ -141,7 +157,6 @@ class Server(object):
 
     def init_config(self, options):
         """Initializes the config handler."""
-        LOG.debug("initializing config")
         # If not provided in args, use config from default location
         if not options.config:
             options.config = app_platform.get_default_server_config()
@@ -213,6 +228,7 @@ class Server(object):
             self.cron.stop()
             self.cron.join()
             self.dma_manager.stop()
+        self.config.store_config()
         LOG.debug('server cleanup done')
 
     @staticmethod
