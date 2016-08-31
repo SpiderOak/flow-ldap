@@ -6,6 +6,7 @@ TODO: document here all that happens on a sync.
 """
 
 import logging
+import threading
 
 from src.sync import action
 
@@ -24,6 +25,7 @@ class LDAPSync(object):
         self.ldap_factory = server.ldap_factory
         self.config = server.config
         self.sync_on = server.ldap_sync_on
+        self.lock = threading.Lock()
 
     def get_ldap_userlist(self):
         """Retrieves the LDAP user directory using the config group_dn."""
@@ -65,6 +67,19 @@ class LDAPSync(object):
             LOG.info("sync disabled, skip run")
             return False
         return True
+
+    def trigger_sync(self):
+        LOG.debug("triggering a ldap sync")
+        threading.Thread(
+            target=self.run_sync,
+        ).start()
+
+    def run_sync(self):
+        self.lock.acquire()
+        try:
+            self.run()
+        finally:
+            self.lock.release()
 
     def run(self):
         """Runs the actual LDAP sync operation."""

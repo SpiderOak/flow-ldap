@@ -138,6 +138,11 @@ class HttpApi(object):
         accounts = self.server.db.get_db_accounts()
         return accounts
 
+    def ldap_sync_trigger(self):
+        """Triggers an LDAP sync (if enabled)."""
+        self.server.ldap_sync.trigger_sync()
+        return "null"
+
     @classmethod
     def get_apis(cls):
         """Helper class method to get all HTTP API method names.

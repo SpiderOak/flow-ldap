@@ -180,6 +180,13 @@ class DbUserlist(CmdMethod):
             )
 
 
+class LdapSyncTrigger(CmdMethod):
+
+    @staticmethod
+    def request(args_dict):
+        print("Triggering an LDAP sync...")
+
+
 METHOD_CLASSES = {
     MethodClass.method(): MethodClass
     for MethodClass in CmdMethod.__subclasses__()

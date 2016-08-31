@@ -13,8 +13,8 @@ import threading
 from flow import Flow
 
 from src import utils, app_platform
-from src.db import backup
 from src.log import app_log
+from src.flowpkg import backup
 from src.flowpkg import flow_util
 from src.flowpkg.flow_notify import FlowNotify
 from src.flowpkg.handler import (
