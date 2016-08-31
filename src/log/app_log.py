@@ -11,8 +11,8 @@ import logging
 import logging.handlers
 
 import src.app_platform
-import console_handler
-from flow_log_channel_handler import FlowLogChannelHandler
+from src.log import console_handler
+from src.log.flow_log_channel_handler import FlowLogChannelHandler
 
 
 def supported_log_destinations():

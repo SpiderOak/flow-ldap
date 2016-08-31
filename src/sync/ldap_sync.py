@@ -7,7 +7,7 @@ TODO: document here all that happens on a sync.
 
 import logging
 
-import action
+from src.sync import action
 
 
 LOG = logging.getLogger("ldap_sync")

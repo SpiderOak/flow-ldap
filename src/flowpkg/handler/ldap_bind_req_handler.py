@@ -28,7 +28,8 @@ class LDAPBindRequestHandler(object):
         It spawns a new thread to process each bind request.
         """
         LOG.debug(
-            "bind request received from '%s'" % notif_data["username"],
+            "bind request received from '%s'",
+            notif_data["username"],
         )
         LDAPBindProcessor(self, notif_data).start()
 

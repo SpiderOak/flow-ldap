@@ -14,7 +14,7 @@ from werkzeug.datastructures import Headers
 from jsonrpc import JSONRPCResponseManager, dispatcher
 
 from src import utils
-from http_api import HttpApi
+from src.http.http_api import HttpApi
 
 
 LOG = logging.getLogger("http_handler")
@@ -37,7 +37,7 @@ class HTTPRequestHandler(object):
         ])
 
     @staticmethod
-    def preflight(request):
+    def preflight(_request):
         """Send Preflight response with HTTP POST and OPTIONS.
         Arguments:
         request : werkzeug.wrappers.Request instance.

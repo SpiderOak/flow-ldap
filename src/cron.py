@@ -39,7 +39,10 @@ class Cron(threading.Thread):
             task_function.__name__,
         )
         # If existing job, then cancel it
-        jobs = [job for job in schedule.jobs if job.job_func.func == task_function]
+        jobs = [
+            job for job in schedule.jobs
+            if job.job_func.func == task_function
+        ]
         if len(jobs) == 1:
             schedule.cancel_job(jobs[0])
         # Schedule the job

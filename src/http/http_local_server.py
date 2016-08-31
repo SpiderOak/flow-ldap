@@ -12,7 +12,7 @@ import binascii
 from werkzeug.serving import ThreadedWSGIServer
 
 from src import utils
-from http_handler import HTTPRequestHandler
+from src.http.http_handler import HTTPRequestHandler
 
 
 LOG = logging.getLogger("http_local_server")

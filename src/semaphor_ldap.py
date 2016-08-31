@@ -48,7 +48,7 @@ def run_server(options):
         server_obj.run()
     except Exception as exception:
         LOG.error("server execution failed with '%s'", exception)
-        raise  # TODO REMOVE
+        raise
     finally:  # Also catches SystemExit
         if server_obj:
             server_obj.cleanup()
@@ -59,7 +59,10 @@ def parse_options(argv):
 
     parser = argparse.ArgumentParser(
         description="%s is a daemon/cli to enable the use of "
-                    "Semaphor with Customer LDAP credentials." % os.path.basename(sys.argv[0]))
+                    "Semaphor with Customer LDAP credentials." % (
+                        os.path.basename(sys.argv[0])
+                    ),
+    )
     parser.add_argument("--version", action="version", version=utils.VERSION)
 
     # Generic config

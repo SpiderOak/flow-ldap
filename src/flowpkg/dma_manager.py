@@ -15,9 +15,9 @@ from flow import Flow
 from src import utils, app_platform
 from src.db import backup
 from src.log import app_log
-import flow_util
-from flow_notify import FlowNotify
-from handler import (
+from src.flowpkg import flow_util
+from src.flowpkg.flow_notify import FlowNotify
+from src.flowpkg.handler import (
     LDAPBindRequestHandler,
     ChannelMemberEventHandler,
     UploadHandler,
@@ -296,8 +296,9 @@ class DMAManager(object):
         # Check for existence
         for channel in channels:
             if channel["name"] == channel_name:
-                members = self.flow.enumerate_channel_member_history(channel[
-                                                                     "id"])
+                members = self.flow.enumerate_channel_member_history(
+                    channel["id"],
+                )
                 member = members[-1]
                 if member["accountId"] == account_id and member[
                         "state"] == "a":
@@ -317,7 +318,7 @@ class DMAManager(object):
     def wait_for_sync(self):
         sync_done = {"value": False}
 
-        def notify_event_handler(notif_type, notif_data):
+        def notify_event_handler(_notif_type, notif_data):
             # EventCode: ReconnectingSyncStop is code 6
             if "EventCode" in notif_data and notif_data["EventCode"] == 6:
                 sync_done["value"] = True
@@ -363,11 +364,11 @@ class DMAManager(object):
         )
 
     def send_fingerprint(self):
-        fp = self.flow.keyring_fingerprint()
+        fpr = self.flow.keyring_fingerprint()
         self.flow.send_message(
             self.ldap_team_id,
             self.log_cid,
             "Semaphor Sign-In URI: %s" % (
-                utils.URI_FINGERPRINT % {"fp": fp}
+                utils.URI_FINGERPRINT % {"fp": fpr}
             ),
         )

@@ -64,14 +64,14 @@ def restore(flow, ldap_tid, backup_cid):
     # wait until download is done
     download_error = {"value": None}
 
-    def download_complete_handler(notif_type, notif_data):
+    def download_complete_handler(_notif_type, _notif_data):
         pass
     flow.register_callback(
         Flow.DOWNLOAD_COMPLETE_NOTIFICATION,
         download_complete_handler,
     )
 
-    def download_error_handler(notif_type, notif_data):
+    def download_error_handler(_notif_type, notif_data):
         download_error["value"] = notif_data["err"]
     flow.register_callback(
         Flow.DOWNLOAD_ERROR_NOTIFICATION,

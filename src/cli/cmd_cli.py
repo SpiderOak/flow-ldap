@@ -17,7 +17,7 @@ from src import (
 )
 from src.http.http_api import HttpApi
 from src.log import app_log
-import cmd_method
+from src.cli import cmd_method
 
 
 LOG = logging.getLogger("cmd_cli")
@@ -88,7 +88,8 @@ class CmdCli(object):
             return
         if self.request_id != response_data.get("id"):
             print (
-                "Invalid response, request/response ids do not match (%s,%s)" % (
+                "Invalid response, request/response "
+                "ids do not match (%s,%s)" % (
                     self.request_id,
                     response_data.get("id"),
                 ),

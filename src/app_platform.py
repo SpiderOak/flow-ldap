@@ -28,9 +28,12 @@ import time
 from src import utils
 
 
-_DEFAULT_APP_OSX_PATH = "/Applications/Semaphor LDAP.app/Contents/Resources/app"
-_DEFAULT_APP_LINUX_RPM_PATH = "/opt/semaphor-ldap-linux-x64/resources/app"
-_DEFAULT_APP_LINUX_DEB_PATH = "/usr/share/semaphor-ldap/resources/app"
+_DEFAULT_APP_OSX_PATH = \
+    "/Applications/Semaphor LDAP.app/Contents/Resources/app"
+_DEFAULT_APP_LINUX_RPM_PATH = \
+    "/opt/semaphor-ldap-linux-x64/resources/app"
+_DEFAULT_APP_LINUX_DEB_PATH = \
+    "/usr/share/semaphor-ldap/resources/app"
 _DEFAULT_APP_WINDOWS_PATH = r"semaphor-ldap\resources\app"
 
 _DEFAULT_CONFIG_DIR = "semaphor-ldap"

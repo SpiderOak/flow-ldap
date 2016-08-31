@@ -15,10 +15,10 @@ class CmdMethod(object):
     def method(cls):
         class_name = cls.__name__
         name = ""
-        for i, c in enumerate(class_name):
-            if i != 0 and c in string.ascii_uppercase:
+        for i, char in enumerate(class_name):
+            if i != 0 and char in string.ascii_uppercase:
                 name += "-"
-            name += c
+            name += char
         return name.lower()
 
     @staticmethod
@@ -73,10 +73,12 @@ class CreateAccount(CmdMethod):
 
     @staticmethod
     def result(result_dict):
-        print("The DMA account was created, please securely store the following credentials:\n"
+        print("The DMA account was created, "
+              "please securely store the following credentials:\n"
               "- Username = %s\n- Recovery Key = %s\n"
               "A Team Join Request was sent to the LDAP Team = %s.\n"
-              "To finish the setup please accept the request and make the DMA an admin." % (
+              "To finish the setup please accept the "
+              "request and make the DMA an admin." % (
                   result_dict["username"],
                   result_dict["password"],
                   result_dict["orgId"],
@@ -164,19 +166,23 @@ class DbUserlist(CmdMethod):
             return
         for user in users:
             print(
-                "%s, uid = %s, ldap-state = %s, semaphor-guid = %s, semaphor-state = %s" % (
+                "%s, uid = %s, ldap-state = %s, "
+                "semaphor-guid = %s, semaphor-state = %s" % (
                     user["email"],
                     user["uniqueid"],
                     "enabled" if user["enabled"] else "disabled",
                     user["semaphor_guid"],
                     "ldaped" if user["state"] == 1 else (
-                        "ldap-locked" if user["state"] == 2 else "full-locked"),
+                        "ldap-locked"
+                        if user["state"] == 2 else "full-locked"
+                    ),
                 )
             )
 
 
 METHOD_CLASSES = {
-    MethodClass.method(): MethodClass for MethodClass in CmdMethod.__subclasses__()
+    MethodClass.method(): MethodClass
+    for MethodClass in CmdMethod.__subclasses__()
 }
 
 
