@@ -138,7 +138,6 @@ class LocalDB(object):
     def delta(self, ldap_accounts):
         db_conn = self._get_connection()
         cur = db_conn.cursor()
-        # Create temporary tables with retrieved ldap info
         cur.execute(
             """/* Create a temp table w/ same cols as ldap_account */
             create temporary table ldap_group
@@ -207,6 +206,7 @@ class LocalDB(object):
             semaphor_data_values,
         )
         db_conn.commit()
+        cur.close()
         db_conn.close()
         return True
 
@@ -261,6 +261,7 @@ class LocalDB(object):
             ),
         )
         db_conn.commit()
+        cur.close()
         db_conn.close()
         return True
 
@@ -277,6 +278,7 @@ class LocalDB(object):
             ),
         )
         db_conn.commit()
+        cur.close()
         db_conn.close()
         return True
 
@@ -295,6 +297,7 @@ class LocalDB(object):
             account_map = {}
             account_map.update(row_account)
             accounts.append(account_map)
+        cur.close()
         db_conn.close()
         return accounts
 
@@ -312,6 +315,7 @@ class LocalDB(object):
             """,
         )
         account_ids = [account[0] for account in cur.fetchall()]
+        cur.close()
         db_conn.close()
         return account_ids
 
@@ -322,4 +326,5 @@ class LocalDB(object):
             "%s%s" % (self.db_file_name, BACKUP_FILENAME_SUFFIX)
         db_back_conn = sqlite3.connect(backup_filename)
         sqlitebck.copy(db_conn, db_back_conn)
+        db_conn.close()
         return backup_filename
