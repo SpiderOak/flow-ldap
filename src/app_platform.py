@@ -118,7 +118,7 @@ def get_config_path():
     CONFIG_OS_PATH_MAP = {
         "darwin": "Library/Application Support",
         "linux2": ".config",
-        "win32": r"%s\system32\config\systemprofile\AppData\Local" % os.environ["SYSTEMROOT"],
+        "win32": r"%s\system32\config\systemprofile\AppData\Local" % os.environ.get("SYSTEMROOT"),
     }
     if SEMLDAP_CONFIGDIR_ENV_VAR in os.environ:
         return os.environ[SEMLDAP_CONFIGDIR_ENV_VAR]

@@ -220,7 +220,7 @@ class Server(object):
         # Run server termination check on main thread
         self.wait_finish()
     
-    def wait_finish():
+    def wait_finish(self):
         """Main thread will loop until the stop_server event is set."""
         while not self.stop_server.is_set():
             time.sleep(0.25)
