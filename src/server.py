@@ -105,7 +105,7 @@ class Server(object):
             ["verbose"],
             self.set_verbose,
         )
-		
+
     def init_db(self):
         """Initializes the db object"""
         LOG.debug("initializing db")
@@ -216,10 +216,10 @@ class Server(object):
         self.dma_manager.start()
         self.http_server.start()
         self.threads_running = True
-        
+
         # Run server termination check on main thread
         self.wait_finish()
-    
+
     def wait_finish(self):
         """Main thread will loop until the stop_server event is set."""
         while not self.stop_server.is_set():
@@ -232,7 +232,7 @@ class Server(object):
             self.cron.stop()
             self.cron.join()
             self.dma_manager.stop()
-            self.http_server.stop()	
+            self.http_server.stop()
             self.http_server.join()
         self.config.store_config()
         LOG.debug('server cleanup done')

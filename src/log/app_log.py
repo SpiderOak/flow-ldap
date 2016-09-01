@@ -57,13 +57,13 @@ def configured_syslog_handler():
 def configured_eventlog_handler():
     """Configures the builtin logging 'NTEventLogHandler' for Windows."""
     dllname = os.path.join(
-        os.path.dirname(sys.executable), 
+        os.path.dirname(sys.executable),
         "win32service.pyd",
     )
     event_handler = logging.handlers.NTEventLogHandler(
         appname="Semaphor-LDAP-Server-Process",
         dllname=dllname,
-    )  
+    )
     event_handler_formatter = logging.Formatter(
         "%(asctime)s %(name)s %(levelname)s %(message)s",
     )
@@ -110,16 +110,16 @@ def setup_common_logging():
 
 
 def get_platform_handlers():
-	supported = supported_log_destinations()
-	handlers = {}
-	for log_type in supported:
-		if log_type == "syslog":
-			handlers["syslog"] = configured_syslog_handler()
-		elif log_type == "event":
-			handlers["event"] = configured_eventlog_handler()
-		elif log_type == "file":
-			handlers["file"] = configured_file_handler()
-	return handlers
+    supported = supported_log_destinations()
+    handlers = {}
+    for log_type in supported:
+        if log_type == "syslog":
+            handlers["syslog"] = configured_syslog_handler()
+        elif log_type == "event":
+            handlers["event"] = configured_eventlog_handler()
+        elif log_type == "file":
+            handlers["file"] = configured_file_handler()
+    return handlers
 
 
 def setup_server_logging():
