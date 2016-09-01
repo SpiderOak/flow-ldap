@@ -7,6 +7,8 @@ except ImportError:
     print("The 'pip' package is needed for the setup")
     exit(1)
 
+BINARY_NAME = "semaphor-ldap"
+
 reqs = parse_requirements("requirements/requirements.txt", session=False)
 install_requires = [str(ir.req) for ir in reqs]
 
@@ -17,7 +19,10 @@ def set_win32_options(options):
         print("The 'py2exe' package is needed for the setup")
         exit(1)
     options.update(
-        console = [{"script": "src/semaphor_ldap.py"}],
+        console = [{
+            "script": "src/semaphor_ldap.py",
+            "dest_base": BINARY_NAME,
+		}],
     )
 
 setup_options = dict(
@@ -26,7 +31,7 @@ setup_options = dict(
     packages = find_packages(),
     entry_points = {
         "console_scripts": [
-            "semaphor-ldap = src.semaphor_ldap:main",
+            "%s = src.semaphor_ldap:main" % BINARY_NAME,
         ],
     },
     install_requires = install_requires, 

@@ -18,14 +18,11 @@ from src.http.http_handler import HTTPRequestHandler
 LOG = logging.getLogger("http_local_server")
 
 
-class HTTPServer(object):
+class HTTPServer(threading.Thread):
     """HTTP server container object. Runs the HTTP server loop."""
 
-    @staticmethod
-    def gen_auth_token():
-        return binascii.hexlify(os.urandom(16))
-
     def __init__(self, server):
+        super(HTTPServer, self).__init__()
         self.server = server
         self.keep_running = threading.Event()
         self.keep_running.set()
@@ -43,8 +40,17 @@ class HTTPServer(object):
             raise
         self.wsgi_server.timeout = 1
 
+    @staticmethod
+    def gen_auth_token():
+        return binascii.hexlify(os.urandom(16))
+
+    def stop(self):
+        self.keep_running.clear()
+
     def run(self):
         """Run this HTTP server."""
+        LOG.debug("start http local server thread")	
         while self.keep_running.is_set():
             self.wsgi_server.handle_request()
         self.wsgi_server.server_close()
+        LOG.debug("stop http local server thread")	

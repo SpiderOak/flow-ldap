@@ -9,6 +9,7 @@ import os
 from ConfigParser import RawConfigParser
 import logging
 import threading
+import time
 
 from src import (
     utils,
@@ -37,7 +38,7 @@ class SemaphorLDAPServerError(Exception):
 class Server(object):
     """Runs the server mode for this application."""
 
-    def __init__(self, options):
+    def __init__(self, options=None, stop_server_event=None):
         self.config = None
         self.dma_manager = None
         self.db = None
@@ -48,6 +49,7 @@ class Server(object):
         self.ldap_factory = None
         self.threads_running = False
         self.ldap_sync_on = threading.Event()
+        self.stop_server = stop_server_event or threading.Event()
 
         self.init_config_dir()
         self.init_config(options)
@@ -158,13 +160,15 @@ class Server(object):
     def init_config(self, options):
         """Initializes the config handler."""
         # If not provided in args, use config from default location
-        if not options.config:
-            options.config = app_platform.get_default_server_config()
+        if options and hasattr(options, "config") and options.config:
+            config_file = options.config
+        else:
+            config_file = app_platform.get_default_server_config()
         # If it doesn't exist, then create it with default values
-        if not os.path.isfile(options.config):
-            server_config.create_config_file(options.config)
+        if not os.path.isfile(config_file):
+            server_config.create_config_file(config_file)
         # Load config file values to memory
-        self.config = server_config.ServerConfig(self, options.config)
+        self.config = server_config.ServerConfig(self, config_file)
 
     def init_http(self):
         """Initializes the HTTPServer instance."""
@@ -210,16 +214,16 @@ class Server(object):
         # Start cron thread, auth listener thread and remote logger thread
         self.cron.start()
         self.dma_manager.start()
+        self.http_server.start()
         self.threads_running = True
-
-        # Run HTTP server on main thread
-        self.run_http()
-
-    def run_http(self):
-        """Runs the HTTP server."""
-        LOG.debug("http started")
-        self.http_server.run()
-        LOG.debug("http finished")
+        
+        # Run server termination check on main thread
+        self.wait_finish()
+    
+    def wait_finish():
+        """Main thread will loop until the stop_server event is set."""
+        while not self.stop_server.is_set():
+            time.sleep(0.25)
 
     def cleanup(self):
         """Server cleanup. Must be called before the program exits."""
@@ -228,6 +232,8 @@ class Server(object):
             self.cron.stop()
             self.cron.join()
             self.dma_manager.stop()
+            self.http_server.stop()	
+            self.http_server.join()
         self.config.store_config()
         LOG.debug('server cleanup done')
 

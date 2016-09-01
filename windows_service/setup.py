@@ -3,16 +3,20 @@ setup.py
 
 Setup for Semaphor-LDAP Windows Sevice.
 """
+
 import sys
-        
-from distutils.core import setup
 import os
-import py2exe
 import glob
 import shutil
+        
+from distutils.core import setup
+import py2exe
+
 
 DESCRIPTION = 'Semaphor-LDAP Windows Service'
 NAME = 'Semaphor-LDAP'
+BINARY_NAME = "semaphor-ldap-service"
+
 
 class Target:
     def __init__(self,**kw):
@@ -25,8 +29,9 @@ class Target:
     
 semaphor_windows_service = Target(
     description = DESCRIPTION,
-    modules = ['windows_service_main'],
-    cmdline_style='pywin32',
+    modules = ["semaphor_ldap_ws"],
+    cmdline_style = 'pywin32',
+	dest_base = BINARY_NAME,
 )
 
 setup(
@@ -35,7 +40,10 @@ setup(
     options = {
         "py2exe":{  "packages" : "encodings",
                     "includes" : \
-                        "win32com, win32service, win32serviceutil, win32event",
+                        "win32com, \
+                        win32service, \
+                        win32serviceutil, \
+                        win32event",
                     "bundle_files" : \
                         3,
                     "dll_excludes" : \

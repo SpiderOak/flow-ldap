@@ -12,6 +12,7 @@ import sys
 import argparse
 import logging
 import signal
+import threading
 
 from src import utils
 from src.cli.cmd_cli import CmdCli
@@ -34,22 +35,19 @@ def signal_handler(sig, frame):
     sys.exit will raise SystemExit that
     should be dealt with.
     """
+    LOG.debug("termination signal received")
     sys.exit(0)
 
 
-signal.signal(signal.SIGINT, signal_handler)
-signal.signal(signal.SIGTERM, signal_handler)
-
-
-def run_server(options):
+def run_server(options, stop_server_event=None):
     """Run the Server object."""
     server_obj = None
     try:
-        server_obj = Server(options)
+        server_obj = Server(options, stop_server_event)
         server_obj.run()
     except Exception as exception:
         LOG.error("server execution failed with '%s'", exception)
-        raise
+        raise  # TODO: remove
     finally:  # Also catches SystemExit
         if server_obj:
             server_obj.cleanup()
@@ -101,6 +99,8 @@ def parse_options(argv):
 
 def main():
     """Entry point for the application."""
+    signal.signal(signal.SIGINT, signal_handler)
+    signal.signal(signal.SIGTERM, signal_handler)
     options = parse_options(sys.argv)
     if options.server_mode:
         run_server(options)
