@@ -50,7 +50,8 @@ setup(
                         "POWRPROF.dll, \
                         API-MS-Win-Core-LocalRegistry-L1-1-0.dll, \
                         API-MS-Win-Core-ProcessThreads-L1-1-0.dll, \
-                        API-MS-Win-Security-Base-L1-1-0.dll",
+                        API-MS-Win-Security-Base-L1-1-0.dll, \
+                        CRYPT32.DLL",
         },
     },
 ) 

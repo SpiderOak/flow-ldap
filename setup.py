@@ -23,6 +23,11 @@ def set_win32_options(options):
             "script": "src/semaphor_ldap.py",
             "dest_base": BINARY_NAME,
 		}],
+		options = {
+            "py2exe": {
+                "dll_excludes": "CRYPT32.DLL",
+            },
+		},
     )
 
 setup_options = dict(
