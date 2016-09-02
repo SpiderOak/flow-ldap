@@ -13,6 +13,7 @@ sys.path.append(ROOT_DIR)
 
 from src.db import local_db
 
+
 SCHEMA_FILE = os.path.join(
     ROOT_DIR, 
     "schema/dma.sql",
@@ -21,6 +22,10 @@ TEST_DIR = os.path.join(
     ROOT_DIR, 
     "test",
 )
+
+UNLOCK = 0
+FULL_LOCK = 1
+LDAP_LOCK = 2
 
 class TestLocalDB(unittest.TestCase):
 
@@ -50,16 +55,16 @@ class TestLocalDB(unittest.TestCase):
                 "email": entry[1],
                 "enabled": entry[2],
             }
-            if entry[3] != 2:
+            if entry[3] != LDAP_LOCK:
                 sem_data = {
                     "semaphor_guid": self.gen_sem_guid(),
                     "password": self.PASSWORD,
                     "level2_secret": self.L2,
-                    "state": entry[3],
+                    "lock_state": entry[3],
                 }
             else:
                 sem_data = {
-                    "state": 2,
+                    "lock_state": LDAP_LOCK,
                 }
             self.db.create_account(ldap_data, sem_data)
         db_conn.commit()
@@ -79,8 +84,8 @@ class TestLocalDB(unittest.TestCase):
         ]
         # This is what we have on the DB
         self.create_account_db_entries([
-            ("1","john@example.com", True, 1),
-            ("4","back@example.com", True, 1),
+            ("1","john@example.com", True, UNLOCK),
+            ("4","back@example.com", True, UNLOCK),
         ])
         # Run the delta
         delta_entries = self.db.delta(ldap_entries)
@@ -105,10 +110,10 @@ class TestLocalDB(unittest.TestCase):
         ]
         # This is what we have on the DB
         self.create_account_db_entries([
-            ("1","john@example.com", True, 1),
-            ("2","alice@example.com", True, 2),
-            ("3","carl@example.com", True, 2),
-            ("4","back@example.com", True, 2),
+            ("1","john@example.com", True, UNLOCK),
+            ("2","alice@example.com", True, LDAP_LOCK),
+            ("3","carl@example.com", True, LDAP_LOCK),
+            ("4","back@example.com", True, LDAP_LOCK),
         ])
         # Run the delta
         delta_entries = self.db.delta(ldap_entries)
@@ -138,12 +143,12 @@ class TestLocalDB(unittest.TestCase):
         ]
         # This is what we have on the DB
         self.create_account_db_entries([
-            ("1","john@example.com", True, 1),
-            ("2","alice@example.com", True, 1),
-            ("3","carl@example.com", False, 1),
-            ("4","neil@example.com", False, 1),
-            ("5","back@example.com", True, 1),
-            ("7","mark@example.com", True, 2),
+            ("1","john@example.com", True, UNLOCK),
+            ("2","alice@example.com", True, UNLOCK),
+            ("3","carl@example.com", False, UNLOCK),
+            ("4","neil@example.com", False, UNLOCK),
+            ("5","back@example.com", True, UNLOCK),
+            ("7","mark@example.com", True, LDAP_LOCK),
         ])
         # Run the delta
         delta_entries = self.db.delta(ldap_entries)

@@ -8,14 +8,13 @@ import logging
 import sqlite3
 import sqlitebck
 
+from flow import Flow
+
 from src import app_platform
 
 
 LOG = logging.getLogger("local_db")
 
-# account state values of local DB account
-LDAPED = 1
-LDAP_LOCK = 2
 
 BACKUP_FILENAME_SUFFIX = "-backup"
 
@@ -72,8 +71,8 @@ class LocalDB(object):
             from ldap_group lg
             left join ldap_account la on lg.uniqueid = la.uniqueid
             left join semaphor_account sa on la.id = sa.ldap_account
-            where lg.enabled and sa.state = 2
-            """,
+            where lg.enabled and sa.lock_state = %d
+            """ % Flow.LDAP_LOCK,
         )
         accounts = cur.fetchall()
         cur.close()
@@ -91,7 +90,7 @@ class LocalDB(object):
             from ldap_group lg
             left join ldap_account la on lg.uniqueid = la.uniqueid
             left join semaphor_account sa on la.id = sa.ldap_account
-            where sa.state = 1 and
+            where sa.lock_state <> %(ldap_lock)d and
             ((not lg.enabled and la.enabled) or
              (lg.enabled and not la.enabled))
 
@@ -104,8 +103,9 @@ class LocalDB(object):
             from ldap_account la
             left join ldap_group lg on la.uniqueid = lg.uniqueid
             left join semaphor_account sa on la.id = sa.ldap_account
-            where la.enabled != 0 and sa.state = 1 and lg.uniqueid is null
-            """,
+            where la.enabled != 0 and sa.lock_state <> %(ldap_lock)d and 
+            lg.uniqueid is null
+            """ % { "ldap_lock": Flow.LDAP_LOCK },
         )
         accounts = cur.fetchall()
         cur.close()
@@ -194,11 +194,11 @@ class LocalDB(object):
             semaphor_data.get("id"),
             semaphor_data.get("password"),
             semaphor_data.get("level2_secret"),
-            semaphor_data.get("state"),
+            semaphor_data.get("lock_state"),
         )
         cur.execute(
             """insert into semaphor_account
-            (ldap_account, semaphor_guid, password, L2, state)
+            (ldap_account, semaphor_guid, password, L2, lock_state)
             values
             (?, ?, ?, ?, ?)
             """,
@@ -219,7 +219,7 @@ class LocalDB(object):
         )
         ldap_account = cur.fetchone()
         cur.execute(
-            """select semaphor_guid, password, L2, state
+            """select semaphor_guid, password, L2, lock_state
             from semaphor_account
             where ldap_account = ?
             """,
@@ -249,13 +249,13 @@ class LocalDB(object):
             return False
         cur.execute(
             """update semaphor_account
-            set semaphor_guid = ?, password = ?, L2 = ?, state = ?
+            set semaphor_guid = ?, password = ?, L2 = ?, lock_state = ?
             where ldap_account = ?
             """, (
                 semaphor_data["semaphor_guid"],
                 semaphor_data["password"],
                 semaphor_data["L2"],
-                semaphor_data["state"],
+                semaphor_data["lock_state"],
                 ldap_account_id[0],
             ),
         )
@@ -265,15 +265,47 @@ class LocalDB(object):
         return True
 
     def update_lock(self, ldap_account):
+        """Updates the 'enabled' state on the 'ldap_account' table
+        for the given account, and also updates the 'lock_state'
+        column of the 'semaphor_account' table.
+        """
+        uniqueid = ldap_account["uniqueid"]
+        enabled = ldap_account["enabled"]
+        semaphor_lock_state = \
+            Flow.UNLOCK if enabled else Flow.FULL_LOCK
         db_conn = self._get_connection()
         cur = db_conn.cursor()
+        # Get ldap_account entry id
+        cur.execute(
+            "select id from ldap_account where uniqueid = ?",
+            (uniqueid,),
+        )
+        row = cur.fetchone()
+        if not row:
+            LOG.debug(
+                "update_lock(%s): account does not exist.",
+                uniqueid,
+            )
+            return False
+        ldap_account_entry_id = row[0]
+        # Update ldap_account entry
         cur.execute(
             """update ldap_account
             set enabled = ?
-            where uniqueid = ?
+            where id = ?
             """, (
-                ldap_account["enabled"],
-                ldap_account["uniqueid"],
+                enabled,
+                ldap_account_entry_id,
+            ),
+        )
+        # Update semaphor_account entry
+        cur.execute(
+            """update semaphor_account
+            set lock_state = ?
+            where ldap_account = ?
+            """, (
+                semaphor_lock_state,
+                ldap_account_entry_id,
             ),
         )
         db_conn.commit()
@@ -286,7 +318,7 @@ class LocalDB(object):
         db_conn = self._get_connection()
         cur = db_conn.cursor()
         cur.execute(
-            """select email, uniqueid, enabled, semaphor_guid, state
+            """select email, uniqueid, enabled, semaphor_guid, lock_state
             from ldap_account la
             left join semaphor_account sa on la.id = sa.ldap_account
             """,
@@ -311,8 +343,8 @@ class LocalDB(object):
             """select semaphor_guid as id
             from semaphor_account sa
             left join ldap_account la on la.id = sa.ldap_account
-            where state = 1 and enabled
-            """,
+            where lock_state = %d and enabled
+            """ % Flow.UNLOCK,
         )
         account_ids = [account[0] for account in cur.fetchall()]
         cur.close()

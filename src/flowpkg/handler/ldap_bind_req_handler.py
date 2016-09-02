@@ -75,7 +75,7 @@ class LDAPBindProcessor(threading.Thread):
         (via link_ldap_account API).
         """
         username = notif_data["username"]
-        if account_entry["state"] != local_db.LDAP_LOCK:
+        if account_entry["lock_state"] != Flow.LDAP_LOCK:
             LOG.error(
                 "cannot link non-ldap-locked account '%s'",
                 username,
@@ -102,7 +102,7 @@ class LDAPBindProcessor(threading.Thread):
             "semaphor_guid": self.flow.get_peer(username)["accountId"],
             "password": password,
             "L2": notif_data["level2Secret"],
-            "state": local_db.LDAPED,
+            "lock_state": Flow.UNLOCK,
         }
         self.db.update_semaphor_account(username, semaphor_data)
         # Add account to LDAP team and prescribed channels
@@ -127,7 +127,7 @@ class LDAPBindProcessor(threading.Thread):
         (via ldap_bind_response API).
         """
         username = notif_data["username"]
-        if account_entry["state"] != local_db.LDAPED:
+        if account_entry["lock_state"] != Flow.UNLOCK:
             LOG.error(
                 "cannot allow device creation "
                 "to non-ldaped account '%s'",

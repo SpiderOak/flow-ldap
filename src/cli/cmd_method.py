@@ -6,6 +6,8 @@ Command line method classes.
 
 import string
 
+from flow import Flow
+
 from src import utils
 
 
@@ -165,16 +167,17 @@ class DbUserlist(CmdMethod):
             print("The local DB is currently empty.")
             return
         for user in users:
+            # TODO: put in function
             print(
                 "%s, uid = %s, ldap-state = %s, "
-                "semaphor-guid = %s, semaphor-state = %s" % (
+                "semaphor-guid = %s, semaphor-lock-state = %s" % (
                     user["email"],
                     user["uniqueid"],
                     "enabled" if user["enabled"] else "disabled",
                     user["semaphor_guid"],
-                    "ldaped" if user["state"] == 1 else (
+                    "unlocked" if user["lock_state"] == Flow.UNLOCK else (
                         "ldap-locked"
-                        if user["state"] == 2 else "full-locked"
+                        if user["lock_state"] == Flow.LDAP_LOCK else "full-locked"
                     ),
                 )
             )

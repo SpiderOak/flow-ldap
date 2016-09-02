@@ -103,7 +103,7 @@ class UserAccountSetup(Action):
                 )
                 return False
             semaphor_data = {
-                "state": local_db.LDAP_LOCK,
+                "lock_state": Flow.LDAP_LOCK,
             }
         else:
             # Create a fresh entry on the local DB
@@ -111,7 +111,7 @@ class UserAccountSetup(Action):
                 "id": self.ldap_sync.flow.get_peer(username)["accountId"],
                 "password": setup_response["password"],
                 "level2_secret": setup_response["level2Secret"],
-                "state": local_db.LDAPED,
+                "lock_state": Flow.UNLOCK,
             }
 
         # Create the entry on the local DB
@@ -187,7 +187,7 @@ class TryUserAccountSetup(UserAccountSetup):
             "id": self.ldap_sync.flow.get_peer(username)["accountId"],
             "password": setup_response["password"],
             "level2_secret": setup_response["level2Secret"],
-            "state": local_db.LDAPED,
+            "lock_state": Flow.UNLOCK,
         }
 
         self.ldap_sync.server.db.update_semaphor_account(

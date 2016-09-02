@@ -28,15 +28,16 @@ create table if not exists semaphor_account (
     /* level2 secret in base64 format */
     L2 varchar(44),
 
-    /* semaphor account current state
-     * 1=ldaped, 2=ldap_locked
-     * - ldaped: account is under control of the DMA.
-     * - ldap_locked: account not under control of DMA, the account
+    /* semaphor account lock state
+     * 0=ldaped/unlocked, 1=full-locked, 2=ldap-locked
+     * - unlocked: account is under control of the DMA and unlocked.
+     * - full-locked: account is under control of the DMA and fully locked.
+     * - ldap-locked: account not under control of DMA, the account
      * is locked and the DMA is waiting for the user to join ldap or change username.
      */
-    state integer not null,    
+    lock_state integer not null,    
 
     unique(semaphor_guid) on conflict replace,
     constraint fk_ldap_account foreign key(ldap_account) references ldap_account(id),
-    constraint state_values check (state = 1 or state = 2)
+    constraint state_values check (lock_state >= 0 and lock_state <= 2)
 );
