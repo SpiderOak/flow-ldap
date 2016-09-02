@@ -198,7 +198,7 @@ def rescan_accounts_on_channel(flow, ldap_tid, cid, accounts):
 def rescan_accounts_on_channels(flow, db, ldap_tid, cids):
     if not cids or not db:
         return
-    accounts = db.get_ldaped_accounts()
+    accounts = db.get_enabled_ldaped_accounts()
     if not accounts:
         return
     for cid in cids:

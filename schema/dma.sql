@@ -6,7 +6,11 @@ create table if not exists ldap_account (
     uniqueid varchar(128) not null,
     /* LDAP email/username */
     email varchar(255) not null,
-    /* LDAP state, which maps to an unlock and full_lock on the Semaphor side */
+    /* LDAP state
+     * If the semaphor entry is ldaped and this column is False, then
+     * the account is under the control of the DMA
+     * and it is fully locked on the semaphor side.
+     */
     enabled boolean not null default true,
 
     unique(email) on conflict replace,
@@ -25,16 +29,14 @@ create table if not exists semaphor_account (
     L2 varchar(44),
 
     /* semaphor account current state
-     * unlock=1, ldap_lock=2, full_lock=3
-     * - unlock: account is under control of the DMA, and is unlocked.
-     * - ldap_lock: account not under control of DMA, the account 
+     * 1=ldaped, 2=ldap_locked
+     * - ldaped: account is under control of the DMA.
+     * - ldap_locked: account not under control of DMA, the account
      * is locked and the DMA is waiting for the user to join ldap or change username.
-     * - full_lock: account is under control of the DMA, 
-     * and fully locked, meaning it cannot operate whatsoever.
      */
     state integer not null,    
 
     unique(semaphor_guid) on conflict replace,
     constraint fk_ldap_account foreign key(ldap_account) references ldap_account(id),
-    constraint state_values check (state >= 1 and state <= 3)
+    constraint state_values check (state = 1 or state = 2)
 );

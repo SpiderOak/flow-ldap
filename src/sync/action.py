@@ -111,7 +111,7 @@ class UserAccountSetup(Action):
                 "id": self.ldap_sync.flow.get_peer(username)["accountId"],
                 "password": setup_response["password"],
                 "level2_secret": setup_response["level2Secret"],
-                "state": local_db.UNLOCK,
+                "state": local_db.LDAPED,
             }
 
         # Create the entry on the local DB
@@ -187,7 +187,7 @@ class TryUserAccountSetup(UserAccountSetup):
             "id": self.ldap_sync.flow.get_peer(username)["accountId"],
             "password": setup_response["password"],
             "level2_secret": setup_response["level2Secret"],
-            "state": local_db.UNLOCK,
+            "state": local_db.LDAPED,
         }
 
         self.ldap_sync.server.db.update_semaphor_account(

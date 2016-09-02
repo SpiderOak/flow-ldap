@@ -7,11 +7,11 @@ import string
 
 import sqlite3
 
-from src.db import local_db
-
 # flow-ldap root dir
 ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.append(ROOT_DIR)
+
+from src.db import local_db
 
 SCHEMA_FILE = os.path.join(
     ROOT_DIR, 
@@ -48,16 +48,14 @@ class TestLocalDB(unittest.TestCase):
             ldap_data = {
                 "uniqueid": entry[0],
                 "email": entry[1],
-                "firstname": entry[2],
-                "lastname": entry[3],
-                "enabled": entry[4],
+                "enabled": entry[2],
             }
-            if entry[5] != 2:
+            if entry[3] != 2:
                 sem_data = {
                     "semaphor_guid": self.gen_sem_guid(),
                     "password": self.PASSWORD,
                     "level2_secret": self.L2,
-                    "state": entry[5],
+                    "state": entry[3],
                 }
             else:
                 sem_data = {
@@ -71,23 +69,22 @@ class TestLocalDB(unittest.TestCase):
         # This is what comes from LDAP
         ldap_entries = [
             # Existing unchanged entry
-            {"uniqueid": "1", "email": "john@example.com", "firstname": "John", "lastname": "Doe", "enabled": 1},
+            {"uniqueid": "1", "email": "john@example.com", "enabled": 1},
             # Alice should setup
-            {"uniqueid": "2", "email": "alice@example.com", "firstname": "Alice", "lastname": "Wonder", "enabled": 1},  # (1)
+            {"uniqueid": "2", "email": "alice@example.com", "enabled": 1},  # (1)
             # Carl is disabled from scratch, so don't setup
-            {"uniqueid": "3", "email": "carl@example.com", "firstname": "Carl", "lastname": "Disabled", "enabled": 0},
+            {"uniqueid": "3", "email": "carl@example.com", "enabled": 0},
             # back@example.com has his uniqueid updated
-            {"uniqueid": "5", "email": "back@example.com", "firstname": "Back", "lastname": "Again", "enabled": 1},
+            {"uniqueid": "5", "email": "back@example.com", "enabled": 1},
         ]
         # This is what we have on the DB
         self.create_account_db_entries([
-            ("1","john@example.com","John","Doe", True, 1),
-            ("4","back@example.com","Back","Again", True, 1),
+            ("1","john@example.com", True, 1),
+            ("4","back@example.com", True, 1),
         ])
         # Run the delta
         delta_entries = self.db.delta(ldap_entries)
         self.assertFalse(delta_entries["retry_setup"])
-        self.assertFalse(delta_entries["update_ldap_data"])
         self.assertFalse(delta_entries["update_lock"])
         setup = delta_entries["setup"]
         self.assertTrue(setup)
@@ -98,25 +95,24 @@ class TestLocalDB(unittest.TestCase):
         # This is what comes from LDAP
         ldap_entries = [
             # Existing unchanged entry, should not retry
-            {"uniqueid": "1", "email": "john@example.com", "firstname": "John", "lastname": "Doe", "enabled": 1},
+            {"uniqueid": "1", "email": "john@example.com", "enabled": 1},
             # Alice should retry
-            {"uniqueid": "2", "email": "alice@example.com", "firstname": "Alice", "lastname": "Wonder", "enabled": 1},  # (1)
+            {"uniqueid": "2", "email": "alice@example.com", "enabled": 1},  # (1)
             # Carl is disabled, so should not retry
-            {"uniqueid": "3", "email": "carl@example.com", "firstname": "Carl", "lastname": "Disabled", "enabled": 0},
+            {"uniqueid": "3", "email": "carl@example.com", "enabled": 0},
             # back@example.com has his uniqueid updated, and enabled, should retry
-            {"uniqueid": "5", "email": "back@example.com", "firstname": "Back", "lastname": "Again", "enabled": 1},  # (2)
+            {"uniqueid": "5", "email": "back@example.com", "enabled": 1},  # (2)
         ]
         # This is what we have on the DB
         self.create_account_db_entries([
-            ("1","john@example.com","John","Doe", True, 1),
-            ("2","alice@example.com","Alice","Wonder", True, 2),
-            ("3","carl@example.com","Carl","Disabled", True, 2),
-            ("4","back@example.com","Back","Again", True, 2),
+            ("1","john@example.com", True, 1),
+            ("2","alice@example.com", True, 2),
+            ("3","carl@example.com", True, 2),
+            ("4","back@example.com", True, 2),
         ])
         # Run the delta
         delta_entries = self.db.delta(ldap_entries)
         self.assertFalse(delta_entries["setup"])
-        self.assertFalse(delta_entries["update_ldap_data"])
         self.assertFalse(delta_entries["update_lock"])
         retry = delta_entries["retry_setup"]
         self.assertTrue(retry)
@@ -128,31 +124,30 @@ class TestLocalDB(unittest.TestCase):
         # This is what comes from LDAP
         ldap_entries = [
             # Existing unchanged entry, should not change lock
-            {"uniqueid": "1", "email": "john@example.com", "firstname": "John", "lastname": "Doe", "enabled": 1},
+            {"uniqueid": "1", "email": "john@example.com", "enabled": 1},
             # Alice should be locked
-            {"uniqueid": "2", "email": "alice@example.com", "firstname": "Alice", "lastname": "Wonder", "enabled": 0},  # (1)
+            {"uniqueid": "2", "email": "alice@example.com", "enabled": 0},  # (1)
             # Carl is disabled, and already disabled on the DB, nothing to do
-            {"uniqueid": "3", "email": "carl@example.com", "firstname": "Carl", "lastname": "Disabled", "enabled": 0},
+            {"uniqueid": "3", "email": "carl@example.com", "enabled": 0},
             # Neil is disabled on the DB, so now it needs to be enabled
-            {"uniqueid": "4", "email": "neil@example.com", "firstname": "Neil", "lastname": "Tyson", "enabled": 1},  # (2)
+            {"uniqueid": "4", "email": "neil@example.com", "enabled": 1},  # (2)
             # back@example.com has his uniqueid updated, and db enabled, should be disabled
-            {"uniqueid": "6", "email": "back@example.com", "firstname": "Back", "lastname": "Again", "enabled": 0},  # (3)
+            {"uniqueid": "6", "email": "back@example.com", "enabled": 0},  # (3)
             # mark@example.com has been disabled, and db enabled, and ldap locked, nothing to do
-            {"uniqueid": "7", "email": "mark@example.com", "firstname": "Mark", "lastname": "Smith", "enabled": 0},
+            {"uniqueid": "7", "email": "mark@example.com", "enabled": 0},
         ]
         # This is what we have on the DB
         self.create_account_db_entries([
-            ("1","john@example.com","John","Doe", True, 1),
-            ("2","alice@example.com","Alice","Wonder", True, 1),
-            ("3","carl@example.com","Carl","Disabled", False, 3),
-            ("4","neil@example.com","Neil","Tyson", False, 3),
-            ("5","back@example.com","Back","Again", True, 1),
-            ("7","mark@example.com","Mark","Smith", True, 2),
+            ("1","john@example.com", True, 1),
+            ("2","alice@example.com", True, 1),
+            ("3","carl@example.com", False, 1),
+            ("4","neil@example.com", False, 1),
+            ("5","back@example.com", True, 1),
+            ("7","mark@example.com", True, 2),
         ])
         # Run the delta
         delta_entries = self.db.delta(ldap_entries)
         self.assertFalse(delta_entries["setup"])
-        self.assertFalse(delta_entries["update_ldap_data"])
         self.assertFalse(delta_entries["retry_setup"])
         update_lock = delta_entries["update_lock"]
         self.assertTrue(update_lock)

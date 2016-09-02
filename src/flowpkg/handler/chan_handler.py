@@ -24,7 +24,7 @@ class ChannelMemberEventHandler(object):
         for cme in notif_data:
             if account_id == cme["accountId"] and \
                cme["state"] == "a":
-                accounts = self.dma_manager.db.get_ldaped_accounts()
+                accounts = self.dma_manager.db.get_enabled_ldaped_accounts()
                 flow_util.rescan_accounts_on_channel(
                     self.dma_manager.flow,
                     self.dma_manager.ldap_team_id,

@@ -14,9 +14,8 @@ from src import app_platform
 LOG = logging.getLogger("local_db")
 
 # account state values of local DB account
-UNLOCK = 1
+LDAPED = 1
 LDAP_LOCK = 2
-FULL_LOCK = 3
 
 BACKUP_FILENAME_SUFFIX = "-backup"
 
@@ -24,8 +23,8 @@ BACKUP_FILENAME_SUFFIX = "-backup"
 class LocalDB(object):
     """Encapsulates semaphor-ldap local DB operations."""
 
-    def __init__(self, schema_file_name):
-        self.db_file_name = app_platform.local_db_path()
+    def __init__(self, schema_file_name, db_file_name=""):
+        self.db_file_name = db_file_name or app_platform.local_db_path()
         LOG.debug("using '%s' database", self.db_file_name)
         db_conn = self._get_connection()
         with open(schema_file_name, "r") as schema_file:
@@ -92,7 +91,7 @@ class LocalDB(object):
             from ldap_group lg
             left join ldap_account la on lg.uniqueid = la.uniqueid
             left join semaphor_account sa on la.id = sa.ldap_account
-            where (sa.state = 1 or sa.state = 3) and
+            where sa.state = 1 and
             ((not lg.enabled and la.enabled) or
              (lg.enabled and not la.enabled))
 
@@ -301,7 +300,7 @@ class LocalDB(object):
         db_conn.close()
         return accounts
 
-    def get_ldaped_accounts(self):
+    def get_enabled_ldaped_accounts(self):
         """Returns the semaphor account ids of the ldaped accounts,
         that is, the accounts under the control of the bot.
         Returns a set of semaphor account ids.
@@ -310,8 +309,9 @@ class LocalDB(object):
         cur = db_conn.cursor()
         cur.execute(
             """select semaphor_guid as id
-            from semaphor_account
-            where state = 1
+            from semaphor_account sa
+            left join ldap_account la on la.id = sa.ldap_account
+            where state = 1 and enabled
             """,
         )
         account_ids = [account[0] for account in cur.fetchall()]
@@ -327,4 +327,5 @@ class LocalDB(object):
         db_back_conn = sqlite3.connect(backup_filename)
         sqlitebck.copy(db_conn, db_back_conn)
         db_conn.close()
+        db_back_conn.close()
         return backup_filename
