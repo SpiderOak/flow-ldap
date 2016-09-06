@@ -64,13 +64,13 @@ class FlowRemoteLogger(threading.Thread):
         self.dma_manager.ready.wait()
         if not self.loop_logger.is_set():
             return
-        logger.debug("flow ready start loop")
         tid = self.dma_manager.ldap_team_id
         cid = self.dma_manager.log_cid
         if not self.check_member(cid):
             raise NotMemberLogChannelError(
                 "Not member of the specified channel",
             )
+        logger.debug("flow ready start loop")
         while self.loop_logger.is_set():
             try:
                 message = self.log_queue.get(block=True, timeout=0.25)

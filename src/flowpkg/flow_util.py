@@ -78,6 +78,13 @@ def is_channel_admin(flow, channel_id):
     return is_admin
 
 
+def is_owner_channel(flow, channel_id):
+    """Returns whether the DMA is owner of the given channel."""
+    members = flow.enumerate_channel_member_history(channel_id)
+    account_id = flow.account_id()
+    return account_id == members[-1]["accountId"]
+
+
 def add_admins_to_channel(flow, ldap_tid, cid):
     account_id = flow.account_id()
     ldap_admins = [
@@ -172,7 +179,8 @@ def add_account_to_team_chans(flow, account_id, tid, channel_ids):
 def get_prescribed_cids(flow, ldap_tid):
     prescribed_channel_ids = [
         channel["id"] for channel in flow.enumerate_channels(ldap_tid)
-        if is_channel_admin(flow, channel["id"])
+        if is_channel_admin(flow, channel["id"]) and
+        not is_owner_channel(flow, channel["id"])
     ]
     return prescribed_channel_ids
 

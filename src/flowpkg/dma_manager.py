@@ -302,7 +302,7 @@ class DMAManager(object):
                 member = members[-1]
                 if member["accountId"] == account_id and member[
                         "state"] == "a":
-                    if not (private and len(members) == 1):
+                    if not private or len(members) == 1:
                         cid = channel["id"]
                         created = False
                         break

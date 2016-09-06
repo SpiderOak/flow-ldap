@@ -162,7 +162,7 @@ def configure_flow_log(flow_remote_logger):
     class OnlyError(logging.Filter):
 
         def filter(self, record):
-            return record.levelname == logging.ERROR
+            return record.levelno == logging.ERROR
 
     class NotFlow(logging.Filter):
 

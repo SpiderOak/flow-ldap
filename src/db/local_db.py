@@ -86,26 +86,25 @@ class LocalDB(object):
         cur.execute(
             """/* ldaped accounts with 'enabled' mismatch. */
             select lg.uniqueid as uniqueid, lg.email as email,
-            lg.enabled as enabled
+            lg.enabled as enabled, sa.lock_state as lock_state
             from ldap_group lg
             left join ldap_account la on lg.uniqueid = la.uniqueid
             left join semaphor_account sa on la.id = sa.ldap_account
-            where sa.lock_state <> %(ldap_lock)d and
-            ((not lg.enabled and la.enabled) or
-             (lg.enabled and not la.enabled))
+            where ((not lg.enabled and la.enabled) or
+                   (lg.enabled and not la.enabled))
 
             union
 
             /* ldaped accounts not present in ldap but present in our db
              * and currently enabled
              */
-            select la.uniqueid as uniqueid, la.email as email, 0 as enabled
+            select la.uniqueid as uniqueid, la.email as email, 0 as enabled,
+            sa.lock_state as lock_state
             from ldap_account la
             left join ldap_group lg on la.uniqueid = lg.uniqueid
             left join semaphor_account sa on la.id = sa.ldap_account
-            where la.enabled != 0 and sa.lock_state <> %(ldap_lock)d and 
-            lg.uniqueid is null
-            """ % { "ldap_lock": Flow.LDAP_LOCK },
+            where la.enabled != 0 and lg.uniqueid is null
+            """,
         )
         accounts = cur.fetchall()
         cur.close()
@@ -288,7 +287,6 @@ class LocalDB(object):
             )
             return False
         ldap_account_entry_id = row[0]
-        # Update ldap_account entry
         cur.execute(
             """update ldap_account
             set enabled = ?
@@ -298,16 +296,17 @@ class LocalDB(object):
                 ldap_account_entry_id,
             ),
         )
-        # Update semaphor_account entry
-        cur.execute(
-            """update semaphor_account
-            set lock_state = ?
-            where ldap_account = ?
-            """, (
-                semaphor_lock_state,
-                ldap_account_entry_id,
-            ),
-        )
+        # Update ldap_account entry if not ldap-locked
+        if ldap_account["lock_state"] != Flow.LDAP_LOCK:
+            cur.execute(
+                """update semaphor_account
+                set lock_state = ?
+                where ldap_account = ?
+                """, (
+                    semaphor_lock_state,
+                    ldap_account_entry_id,
+                ),
+            )
         db_conn.commit()
         cur.close()
         db_conn.close()

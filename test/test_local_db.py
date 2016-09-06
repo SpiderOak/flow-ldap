@@ -118,7 +118,7 @@ class TestLocalDB(unittest.TestCase):
         # Run the delta
         delta_entries = self.db.delta(ldap_entries)
         self.assertFalse(delta_entries["setup"])
-        self.assertFalse(delta_entries["update_lock"])
+        self.assertEqual(len(delta_entries["update_lock"]), 1)
         retry = delta_entries["retry_setup"]
         self.assertTrue(retry)
         self.assertEqual(len(retry), 2)
@@ -138,8 +138,11 @@ class TestLocalDB(unittest.TestCase):
             {"uniqueid": "4", "email": "neil@example.com", "enabled": 1},  # (2)
             # back@example.com has his uniqueid updated, and db enabled, should be disabled
             {"uniqueid": "6", "email": "back@example.com", "enabled": 0},  # (3)
-            # mark@example.com has been disabled, and db enabled, and ldap locked, nothing to do
-            {"uniqueid": "7", "email": "mark@example.com", "enabled": 0},
+            # mark@example.com has been disabled, db enabled, 
+            # and ldap locked, should update only the semaphor enabled column
+            {"uniqueid": "7", "email": "mark@example.com", "enabled": 0},  # (4)
+            # enable@example.com should be enabled only on ldap_account table
+            {"uniqueid": "10", "email": "enable@example.com", "enabled": 1},  # (5)
         ]
         # This is what we have on the DB
         self.create_account_db_entries([
@@ -149,20 +152,29 @@ class TestLocalDB(unittest.TestCase):
             ("4","neil@example.com", False, UNLOCK),
             ("5","back@example.com", True, UNLOCK),
             ("7","mark@example.com", True, LDAP_LOCK),
+            ("8","other@example.com", True, LDAP_LOCK),  # other@example.com should be locked (6)
+            ("9","nothing@example.com", False, LDAP_LOCK),
+            ("10","enable@example.com", False, LDAP_LOCK),
         ])
         # Run the delta
         delta_entries = self.db.delta(ldap_entries)
         self.assertFalse(delta_entries["setup"])
-        self.assertFalse(delta_entries["retry_setup"])
+        self.assertEqual(len(delta_entries["retry_setup"]), 1)
         update_lock = delta_entries["update_lock"]
         self.assertTrue(update_lock)
-        self.assertEqual(len(update_lock), 3)
-        self.assertEqual(update_lock[0]["email"], "alice@example.com")  # (1)
-        self.assertEqual(update_lock[0]["enabled"], 0)
-        self.assertEqual(update_lock[1]["email"], "neil@example.com")  # (2)
-        self.assertEqual(update_lock[1]["enabled"], 1)
-        self.assertEqual(update_lock[2]["email"], "back@example.com")  # (3)
-        self.assertEqual(update_lock[2]["enabled"], 0)
+        self.assertEqual(len(update_lock), 6)
+        self.assertEqual(update_lock[0]["email"], "enable@example.com")  # (5)
+        self.assertEqual(update_lock[0]["enabled"], 1)
+        self.assertEqual(update_lock[1]["email"], "alice@example.com")  # (1)
+        self.assertEqual(update_lock[1]["enabled"], 0)
+        self.assertEqual(update_lock[2]["email"], "neil@example.com")  # (2)
+        self.assertEqual(update_lock[2]["enabled"], 1)
+        self.assertEqual(update_lock[3]["email"], "back@example.com")  # (3)
+        self.assertEqual(update_lock[3]["enabled"], 0)
+        self.assertEqual(update_lock[4]["email"], "mark@example.com")  # (4)
+        self.assertEqual(update_lock[4]["enabled"], 0)
+        self.assertEqual(update_lock[5]["email"], "other@example.com")  # (6)
+        self.assertEqual(update_lock[5]["enabled"], 0)
 
     def tearDown(self):
         os.remove(self.db_file)

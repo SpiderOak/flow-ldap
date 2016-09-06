@@ -42,9 +42,9 @@ class LDAPSync(object):
     def changes_into_actions(self, delta_changes):
         """Turns the given delta changes into executable action objects."""
         action_labels = {
+            "retry_setup": action.TryUserAccountSetup,
             "setup": action.UserAccountSetup,
             "update_lock": action.UpdateLock,
-            "retry_setup": action.TryUserAccountSetup,
         }
         actions = []
         for action_label, entries in delta_changes.iteritems():
@@ -55,9 +55,19 @@ class LDAPSync(object):
     def execute_actions(self, actions):
         """Executes all the actions needed to comply with the LDAP sync."""
         for action_i in actions:
-            success = action_i.execute()
-            if not success:
-                LOG.error("action %s execution failed", action_i)
+            try:
+                success = action_i.execute()
+                if not success:
+                    LOG.error(
+                        "action %s execution failed", 
+                        action_i,
+                    )
+            except Exception as exception:
+                LOG.error(
+                    "action %s execution failed with error: %s", 
+                    action_i, 
+                    exception,
+                )
 
     def pre_checks(self):
         if not self.flow_ready.is_set():

@@ -57,6 +57,7 @@ class UserAccountSetup(Action):
             self.ldap_sync.flow,
             self.ldap_sync.dma_manager.ldap_team_id,
         )
+        LOG.debug("prescribed channels: %s", cids)
         flow_util.add_account_to_team_chans(
             self.ldap_sync.flow,
             account_id,
@@ -135,10 +136,11 @@ class UpdateLock(Action):
             if self.ldap_account["enabled"] \
             else Flow.FULL_LOCK
         try:
-            self.ldap_sync.flow.set_account_lock(
-                username=username,
-                lock_type=lock_type,
-            )
+            if self.ldap_account["lock_state"] != Flow.LDAP_LOCK:
+                self.ldap_sync.flow.set_account_lock(
+                    username=username,
+                    lock_type=lock_type,
+                )
         except Flow.FlowError as flow_err:
             self.log.error(
                 "set_account_lock(%s) failed: %s",
