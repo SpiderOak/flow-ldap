@@ -55,7 +55,7 @@ def create_generic_arg_parser():
     return parser
 
 
-def run_cli_as_default(options):
+def run_cli_as_default():
     """Run the CmdCli object, to be used in windows
     so we don't have to use the client prefix every time
     we use the client mode.
@@ -128,4 +128,7 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    if sys.platform == "win32":
+        run_cli_as_default()
+    else:
+        main()
