@@ -59,13 +59,13 @@ class LDAPSync(object):
                 success = action_i.execute()
                 if not success:
                     LOG.error(
-                        "action %s execution failed", 
+                        "action %s execution failed",
                         action_i,
                     )
             except Exception as exception:
                 LOG.error(
-                    "action %s execution failed with error: %s", 
-                    action_i, 
+                    "action %s execution failed with error: %s",
+                    action_i,
                     exception,
                 )
 

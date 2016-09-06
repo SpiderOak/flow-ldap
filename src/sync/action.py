@@ -111,7 +111,7 @@ class UserAccountSetup(Action):
             semaphor_data = {
                 "id": self.ldap_sync.flow.get_peer(username)["accountId"],
                 "password": setup_response["password"],
-                "level2_secret": setup_response["level2Secret"],
+                "L2": setup_response["level2Secret"],
                 "lock_state": Flow.UNLOCK,
             }
 
@@ -188,7 +188,7 @@ class TryUserAccountSetup(UserAccountSetup):
         semaphor_data = {
             "id": self.ldap_sync.flow.get_peer(username)["accountId"],
             "password": setup_response["password"],
-            "level2_secret": setup_response["level2Secret"],
+            "L2": setup_response["level2Secret"],
             "lock_state": Flow.UNLOCK,
         }
 

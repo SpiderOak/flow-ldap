@@ -192,7 +192,7 @@ class LocalDB(object):
             cur.lastrowid,
             semaphor_data.get("id"),
             semaphor_data.get("password"),
-            semaphor_data.get("level2_secret"),
+            semaphor_data.get("L2"),
             semaphor_data.get("lock_state"),
         )
         cur.execute(
@@ -251,7 +251,7 @@ class LocalDB(object):
             set semaphor_guid = ?, password = ?, L2 = ?, lock_state = ?
             where ldap_account = ?
             """, (
-                semaphor_data["semaphor_guid"],
+                semaphor_data["id"],
                 semaphor_data["password"],
                 semaphor_data["L2"],
                 semaphor_data["lock_state"],

@@ -54,16 +54,30 @@ class LDAPBindProcessor(threading.Thread):
         if not account_entry["enabled"]:
             LOG.debug("account '%s' is disabled, cannot bind", username)
             return
-        if self.notif_data["level2Secret"]:
-            self.process_link_request(
-                self.notif_data,
-                account_entry,
-            )
-        else:
-            self.process_create_ldap_device_request(
-                self.notif_data,
-                account_entry,
-            )
+        if self.notif_data["level2Secret"]:  # link to ldap request
+            try:
+                self.process_link_request(
+                    self.notif_data,
+                    account_entry,
+                )
+            except Exception as exception:
+                LOG.error(
+                    "account '%s' link failed: '%s'",
+                    username,
+                    exception,
+                )
+        else:  # device creation request
+            try:
+                self.process_create_ldap_device_request(
+                    self.notif_data,
+                    account_entry,
+                )
+            except Exception as exception:
+                LOG.error(
+                    "account '%s' device creation failed: '%s'",
+                    username,
+                    exception,
+                )
 
     def process_link_request(self, notif_data, account_entry):
         """It executes the link request, which involves:
@@ -99,7 +113,7 @@ class LDAPBindProcessor(threading.Thread):
             return
         # Account is in control of the bot now, update data
         semaphor_data = {
-            "semaphor_guid": self.flow.get_peer(username)["accountId"],
+            "id": self.flow.get_peer(username)["accountId"],
             "password": password,
             "L2": notif_data["level2Secret"],
             "lock_state": Flow.UNLOCK,
@@ -112,7 +126,7 @@ class LDAPBindProcessor(threading.Thread):
         )
         flow_util.add_account_to_team_chans(
             self.flow,
-            semaphor_data["semaphor_guid"],
+            semaphor_data["id"],
             self.ldap_tid,
             prescr_cids,
         )
