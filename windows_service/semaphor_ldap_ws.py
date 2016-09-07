@@ -12,7 +12,6 @@ $ python semaphor_ldap_ws.py {install,stop,remove,start}
 """
 
 import os
-import os.path
 import sys
 import threading
 
