@@ -103,13 +103,13 @@ class ConfigSet(CmdMethod):
 
     @staticmethod
     def request(args_dict):
-        if "value" in args_dict and args_dict["value"]:
-            print("Setting config '%s'..." % args_dict["key"])
-        else:  # Prompt variable
+        if "value" not in args_dict or not args_dict["value"]:
+            # Prompt variable
             if args_dict.get("key") == "admin-pw":
                 args_dict["value"] = getpass.getpass("Password: ")
             else:
                 args_dict["value"] = raw_input("Value: ")
+        print("Setting config '%s'..." % args_dict["key"])
         return args_dict
 
 

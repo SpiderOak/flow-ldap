@@ -79,7 +79,7 @@ Getting config list...
   - server-type = AD
   - uri = ldap://domain.com                     # (3)
   - dir-auth-source = dn
-  - admin-pw = password                         # (4)
+  - admin-pw = ********                         # (4)
   - base-dn = dc=domain,dc=com                  # (5)
   - dir-guid-source = objectGUID
   - dir-member-source = member
@@ -102,7 +102,8 @@ Setting config 'uri'...
 $ semaphor-ldap client config-set --key admin-user --value Administrator@example.com
 Setting config 'admin-user'...
 
-$ semaphor-ldap client config-set --key admin-pw --value password
+$ semaphor-ldap client config-set --key admin-pw
+Password:
 Setting config 'admin-pw'...
 
 $ semaphor-ldap client config-set --key base-dn --value dc=example,dc=com
