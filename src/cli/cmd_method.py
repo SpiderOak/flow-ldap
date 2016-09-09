@@ -5,6 +5,7 @@ Command line method classes.
 """
 
 import string
+import getpass
 
 from flow import Flow
 
@@ -25,7 +26,7 @@ class CmdMethod(object):
 
     @staticmethod
     def request(args_dict):
-        pass
+        return args_dict
 
     @staticmethod
     def error(error_dict):
@@ -54,6 +55,7 @@ class CheckStatus(CmdMethod):
     @staticmethod
     def request(args_dict):
         print("Checking Semaphor-LDAP server status...")
+        return args_dict
 
     @staticmethod
     def result(result_dict):
@@ -72,6 +74,7 @@ class CreateAccount(CmdMethod):
     @staticmethod
     def request(args_dict):
         print("Creating Directory Management Account...")
+        return args_dict
 
     @staticmethod
     def result(result_dict):
@@ -93,13 +96,21 @@ class CreateDevice(CmdMethod):
     @staticmethod
     def request(args_dict):
         print("Creating device for account '%s'..." % args_dict["username"])
+        return args_dict
 
 
 class ConfigSet(CmdMethod):
 
     @staticmethod
     def request(args_dict):
-        print("Setting config '%s'..." % args_dict["key"])
+        if "value" in args_dict and args_dict["value"]:
+            print("Setting config '%s'..." % args_dict["key"])
+        else:  # Prompt variable
+            if args_dict.get("key") == "admin-pw":
+                args_dict["value"] = getpass.getpass("Password: ")
+            else:
+                args_dict["value"] = raw_input("Value: ")
+        return args_dict
 
 
 class ConfigList(CmdMethod):
@@ -107,12 +118,15 @@ class ConfigList(CmdMethod):
     @staticmethod
     def request(args_dict):
         print("Getting config list...")
+        return args_dict
 
     @staticmethod
     def result(result_dict):
         for group, variables in result_dict.items():
             print("== %s ==" % group)
             for key, value in variables.items():
+                if key == "admin-pw":
+                    value = "*" * len(value)
                 print("  - %s = %s" % (key, value))
 
 
@@ -121,6 +135,7 @@ class DmaFingerprint(CmdMethod):
     @staticmethod
     def request(args_dict):
         print("Getting Directory Management Account fingerprint...")
+        return args_dict
 
     @staticmethod
     def result(result_dict):
@@ -133,6 +148,7 @@ class GroupUserlist(CmdMethod):
     @staticmethod
     def request(args_dict):
         print("Getting list of accounts from the configured LDAP group...")
+        return args_dict
 
     @staticmethod
     def result(result_dict):
@@ -152,6 +168,7 @@ class LogDest(CmdMethod):
     @staticmethod
     def request(args_dict):
         print("Setting log destination to %s..." % args_dict["target"])
+        return args_dict
 
 
 class DbUserlist(CmdMethod):
@@ -159,6 +176,7 @@ class DbUserlist(CmdMethod):
     @staticmethod
     def request(args_dict):
         print("Retrieving users from the local database...")
+        return args_dict
 
     @staticmethod
     def result(result_dict):
@@ -188,6 +206,7 @@ class LdapSyncTrigger(CmdMethod):
     @staticmethod
     def request(args_dict):
         print("Triggering an LDAP sync...")
+        return args_dict
 
 
 class ServerVersion(CmdMethod):

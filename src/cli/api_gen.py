@@ -50,10 +50,15 @@ def add_api_methods(parser):
         for arg in method_args:
             arg_doc = "Doc N/A."
             arg = arg.replace("_", "-")
+            required = True
             if arg in args_doc:
                 arg_doc = args_doc[arg]
+                if "[optional]" in arg_doc:
+                    arg_doc = arg_doc.replace("[optional]", "")
+                    required = False
             method_parser.add_argument(
                 "--" + arg,
                 metavar="X",
                 help=arg_doc,
-                required=True)
+                required=required,
+            )

@@ -91,7 +91,7 @@ class HttpApi(object):
         """Returns a list with the current server configuration.
         Arguments:
         key : Name of the configuration variable to set.
-        value : Value of the configuration variable to set.
+        value : Value of the configuration variable to set.[optional]
         """
         self.server.config.set_key_value(key, value)
         return "null"

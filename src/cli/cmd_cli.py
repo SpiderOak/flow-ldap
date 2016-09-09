@@ -68,7 +68,7 @@ class CmdCli(object):
         }
         LOG.debug("request: %s", payload)
         method_obj = cmd_method.get_cmd_method(method)
-        method_obj.request(args_dict)
+        args_dict = method_obj.request(args_dict)
         try:
             response = requests.post(
                 self.server_uri,
