@@ -20,7 +20,7 @@ execute() {
 
 if [ "$1" == "--format" ] ; then
     if command_exists autopep8 ; then
-        find ./src -name "*.py" -exec autopep8 -va --in-place --max-line-length 79 {} \;
+        find . -path ./build -prune -o -name "*.py" -exec autopep8 -va --in-place --max-line-length 79 {} \;
     else
         echo "Skipping autopep8, not installed."
     fi
