@@ -4,7 +4,7 @@ utils.py
 Utilities and definitions for semaphor-ldap
 """
 
-VERSION = "0.1"
+VERSION = "1.0.0"
 
 AUTOCONNECT_CONFIG_FILE_NAME = "server-auto-connect.cfg"
 SERVER_CONFIG_FILE_NAME = "server-config.cfg"

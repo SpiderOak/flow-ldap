@@ -7,6 +7,7 @@ HTTP handling for server and CLI communication
 import logging
 import inspect
 
+from src import utils
 from src.log import app_log
 
 
@@ -75,7 +76,7 @@ class HttpApi(object):
     def log_dest(self, target):
         """Configures the server's logging destination.
         Arguments:
-        target : {syslog,event,file,null}
+        target : {syslog,event,file,null}.
         """
         if target not in app_log.supported_log_destinations():
             raise Exception("Logging destination not supported on platform")
@@ -87,7 +88,11 @@ class HttpApi(object):
         return self.server.config.get_key_values()
 
     def config_set(self, key, value):
-        """Returns a list with the current server configuration."""
+        """Returns a list with the current server configuration.
+        Arguments:
+        key : Name of the configuration variable to set.
+        value : Value of the configuration variable to set.
+        """
         self.server.config.set_key_value(key, value)
         return "null"
 
@@ -142,6 +147,10 @@ class HttpApi(object):
         """Triggers an LDAP sync (if enabled)."""
         self.server.ldap_sync.trigger_sync()
         return "null"
+
+    def server_version(self):
+        """Returns the version of the running server."""
+        return utils.VERSION
 
     @classmethod
     def get_apis(cls):

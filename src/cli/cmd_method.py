@@ -174,7 +174,7 @@ class DbUserlist(CmdMethod):
                     user["email"],
                     user["uniqueid"],
                     "enabled" if user["enabled"] else "disabled",
-                    user["semaphor_guid"],
+                    user["semaphor_guid"] or "N/A",
                     "unlocked" if user["lock_state"] == Flow.UNLOCK else (
                         "ldap-locked"
                         if user["lock_state"] == Flow.LDAP_LOCK else "full-locked"
@@ -188,6 +188,13 @@ class LdapSyncTrigger(CmdMethod):
     @staticmethod
     def request(args_dict):
         print("Triggering an LDAP sync...")
+
+
+class ServerVersion(CmdMethod):
+
+    @staticmethod
+    def result(result_dict):
+        print("The server version is: '%s'" % result_dict)
 
 
 METHOD_CLASSES = {
