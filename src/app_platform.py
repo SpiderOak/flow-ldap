@@ -4,7 +4,7 @@ app_platform.py
 Platform specific definitions.
 
 If $APPDATA is the Application data directory for semaphor-ldap,
-then here's the directory structure:
+then here's the intended directory structure:
 $APPDATA/resources/app/img/bot.jpg
 $APPDATA/resources/app/schema/dma.sql
 $APPDATA/resources/app/backend/schema/per_local_account.sql
@@ -12,7 +12,7 @@ $APPDATA/resources/app/backend/schema/per_local_account_and_channel.sql
 $APPDATA/resources/app/backend/semaphor-backend
 
 If $CONFIG is the Configuration data directory for semaphor-ldap,
-then here's the directory structure:
+then here's the intended directory structure:
 $CONFIG/server-config.cfg
 $CONFIG/*.sqlite  # semaphor local DBs
 $CONFIG/DMA*.sqlite  # DMA local DB
@@ -99,6 +99,9 @@ def get_default_backend_schema_path():
 
 
 def get_default_schema_path():
+    """Returns the path for the Semaphor-LDAP
+    sqlite schema file.
+    """
     return os.path.join(
         _APP_OS_PATH_MAP[sys.platform](),
         _DEFAULT_SCHEMA_DIR,
@@ -107,6 +110,7 @@ def get_default_schema_path():
 
 
 def get_default_img_path():
+    """Returns the path for the img resource directory."""
     return os.path.join(
         _APP_OS_PATH_MAP[sys.platform](),
         "img",

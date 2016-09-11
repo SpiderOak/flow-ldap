@@ -10,16 +10,22 @@ import Queue
 
 
 class NotMemberLogChannelError(Exception):
+    """Excepion raised when the DMA is not a member of the LOG channel."""
     pass
 
 
 class FlowLogChannelHandler(logging.Handler):
+    """Log handler to send records to a given flow remote logger.
+    We have to queue the record because we cannot log messages
+    with ~2 seconds of latency.
+    """
 
     def __init__(self, flow_remote_logger):
         super(FlowLogChannelHandler, self).__init__()
         self.flow_remote_logger = flow_remote_logger
 
     def emit(self, record):
+        """It queues the given record to the remote logger."""
         record_str = self.format(record)
         try:
             self.flow_remote_logger.queue_message(record_str)
@@ -30,6 +36,9 @@ class FlowLogChannelHandler(logging.Handler):
 
 
 class FlowRemoteLogger(threading.Thread):
+    """Thread class to send log messages to the LOG channel.
+    It reads the messages from an internal queue.
+    """
 
     def __init__(self, dma_manager):
         super(FlowRemoteLogger, self).__init__()
@@ -41,6 +50,7 @@ class FlowRemoteLogger(threading.Thread):
         self.MAX_Q_SIZE = 100
 
     def check_member(self, cid):
+        """Checks whether the account is member of the given cid."""
         members = [
             member["accountId"]
             for member in
@@ -49,6 +59,7 @@ class FlowRemoteLogger(threading.Thread):
         return self.flow.account_id() in members
 
     def queue_message(self, message):
+        """Queues the given message to the internal queue."""
         if self.log_queue.qsize() >= self.MAX_Q_SIZE:
             return
         self.log_queue.put(message)
@@ -58,6 +69,8 @@ class FlowRemoteLogger(threading.Thread):
         self.loop_logger.clear()
 
     def run(self):
+        """Runs the remote logger thread.
+        It gets messages from the queue and sends them to the LOG channel."""
         logger = logging.getLogger("flow_remote_logger")
         logger.debug("flow remote logger thread started")
         logger.debug("wait flow setup")

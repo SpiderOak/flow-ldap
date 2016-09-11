@@ -1,7 +1,7 @@
 """
 ldap_factory.py
 
-
+LDAP connection factory class.
 """
 
 import logging
@@ -14,6 +14,7 @@ LOG = logging.getLogger("ldap_factory")
 
 
 class LDAPFactory(object):
+    """Factory class to create connections to an LDAP server."""
 
     def __init__(self, config):
         self.lock = threading.Lock()
@@ -21,6 +22,7 @@ class LDAPFactory(object):
         self.reload_config()
 
     def reload_config(self):
+        """Reloads LDAP configuration from self.config."""
         LOG.debug("reloading ldap config")
         self.lock.acquire()
         self.uri = self.config.get("uri")
@@ -37,6 +39,9 @@ class LDAPFactory(object):
         self.lock.release()
 
     def get_connection(self, timeout=5):
+        """Returns an 'LDAPConnection'
+        connection object to the LDAP server.
+        """
         self.lock.acquire()
         try:
             ldap_conn = ldap_reader.LdapConnection(
@@ -52,5 +57,9 @@ class LDAPFactory(object):
         return ldap_conn
 
     def check_connection(self):
+        """Performs a test connection to the LDAP server.
+        It raises an ldap.LDAPError exception if there
+        was an error when trying to connect.
+        """
         ldap_conn = self.get_connection()
         ldap_conn.close()

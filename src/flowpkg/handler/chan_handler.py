@@ -1,6 +1,7 @@
 """
 chan_handler.py
 
+Processes the channel-member-event notifications.
 """
 
 import logging
@@ -14,12 +15,19 @@ LOG = logging.getLogger("chan_handler")
 
 
 class ChannelMemberEventHandler(object):
+    """Processes the channel-member-event notifications.
+    It checks if the DMA was added to a channel as admin
+    (this turns the channel into a prescribed channel),
+    and if that's the case, it performs rescan to add all
+    DB accounts to the new prescribed channel.
+    """
 
     def __init__(self, dma_manager):
         self.dma_manager = dma_manager
         self.notif_types = [Flow.CHANNEL_MEMBER_NOTIFICATION]
 
     def callback(self, _notif_type, notif_data):
+        """Callback to execute on channel-member-event notification."""
         account_id = self.dma_manager.flow.account_id()
         for cme in notif_data:
             if account_id == cme["accountId"] and \

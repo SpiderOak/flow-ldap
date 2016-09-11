@@ -32,18 +32,23 @@ class LocalDB(object):
         db_conn.close()
 
     def _get_connection(self):
+        """Returns a connection to the local DB."""
         db_conn = sqlite3.connect(self.db_file_name)
         db_conn.row_factory = sqlite3.Row
         return db_conn
 
     def check_connection(self):
+        """Tries a connection to the DB.
+        It throws a sqlite3.Error exception if it failed to connect.
+        """
         db_conn = self._get_connection()
         db_conn.close()
 
     def entries_to_setup(self, db_conn):
         """Get accounts that are on LDAP but not on local DB and
-        they are marked as enabled on LDAP.
-        These accounts should be setup.
+        are marked as enabled on LDAP. These accounts should be setup.
+        By setup we mean Semaphor-LDAP will create Semaphor accounts
+        for them.
         """
         cur = db_conn.cursor()
         cur.execute(
@@ -79,7 +84,7 @@ class LocalDB(object):
         return accounts
 
     def entries_to_update_lock(self, db_conn):
-        """Get accounts that the bot controls (ldaped) and should
+        """Get accounts that we track on our local DB and should
         be 'full lock'ed or unlocked from 'full lock'.
         """
         cur = db_conn.cursor()
@@ -111,6 +116,14 @@ class LocalDB(object):
         return accounts
 
     def update_uids(self, db_conn):
+        """Update 'uniqueid's of accounts that don't match our local DB.
+        E.g., if we have:
+         - LDAP: email=john@example.com, uniqueid=X,
+         - DB: email=john@example.com, uniqueid=Y,
+        Then this method will update our local DB entry for
+        'john@example.com' with 'uniqueid=X'.
+        We currently consider the 'email' as the identifier of EndUsers.
+        """
         cur = db_conn.cursor()
         cur.execute(
             """select lg.uniqueid, lg.email
@@ -131,9 +144,16 @@ class LocalDB(object):
             """,
             accounts_values,
         )
+        # Commit to update uniqueids on local DB
+        db_conn.commit()
         cur.close()
 
     def delta(self, ldap_accounts):
+        """It will first update (commit) uniqueids
+        on our local db to match LDAP.
+        Then return (not execute) the actions
+        to run for our local DB to match LDAP.
+        """
         db_conn = self._get_connection()
         cur = db_conn.cursor()
         cur.execute(
@@ -156,14 +176,18 @@ class LocalDB(object):
         )
         cur.close()
 
+        # Update uniqueids on local DB first
         self.update_uids(db_conn)
 
+        # Determine actions, but we do not execute them
         delta_changes = {}
         delta_changes["setup"] = self.entries_to_setup(db_conn)
         delta_changes["retry_setup"] = self.entries_to_retry_setup(db_conn)
         delta_changes["update_lock"] = self.entries_to_update_lock(db_conn)
 
         db_conn.close()
+
+        # Return actions to the caller
         return delta_changes
 
     def create_account(self, ldap_data, semaphor_data):
@@ -209,7 +233,11 @@ class LocalDB(object):
         return True
 
     def get_account(self, username):
-        """Get all available local DB data of the given username."""
+        """Get all available local DB data of the given username.
+        Returns a dict with the following keys:
+        'uniqueid', email', 'enabled',
+        'semaphor_guid', 'password', 'L2' and 'lock_state'.
+        """
         db_conn = self._get_connection()
         cur = db_conn.cursor()
         cur.execute(
@@ -233,6 +261,9 @@ class LocalDB(object):
         return account
 
     def update_semaphor_account(self, username, semaphor_data):
+        """Update 'semaphor_account' DB entry for the given username
+        with the provided 'semaphor_data'.
+        """
         db_conn = self._get_connection()
         cur = db_conn.cursor()
         cur.execute(
@@ -267,6 +298,8 @@ class LocalDB(object):
         """Updates the 'enabled' state on the 'ldap_account' table
         for the given account, and also updates the 'lock_state'
         column of the 'semaphor_account' table.
+        It only updates the semaphor_account.lock_state if it is
+        not ldap-locked.
         """
         uniqueid = ldap_account["uniqueid"]
         enabled = ldap_account["enabled"]
@@ -313,7 +346,7 @@ class LocalDB(object):
         return True
 
     def get_db_accounts(self):
-        """Returns the accounts on the local db."""
+        """Returns all the accounts on the local db."""
         db_conn = self._get_connection()
         cur = db_conn.cursor()
         cur.execute(
@@ -351,7 +384,7 @@ class LocalDB(object):
         return account_ids
 
     def run_backup(self):
-        """Backups the local DB on a private Semaphor channel."""
+        """Creates a backup database file and returns its file name."""
         db_conn = self._get_connection()
         backup_filename = \
             "%s%s" % (self.db_file_name, BACKUP_FILENAME_SUFFIX)

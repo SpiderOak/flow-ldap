@@ -1,7 +1,7 @@
 """
 backup.py
 
-Performs a local DB backup on a Semaphor channel.
+Performs a local DB backup on a private Semaphor channel.
 """
 
 import logging
@@ -16,9 +16,12 @@ LOG = logging.getLogger("backup")
 
 
 def run(db, flow, ldap_tid, backup_cid):
-    """Perform the DB backup and save it as attachment."""
-    if not (flow and ldap_tid and backup_cid):
-        return
+    """Perform the DB backup and upload it as an attachment
+    on the provided 'backup_cid' private channel.
+    """
+    assert(flow)
+    assert(ldap_tid)
+    assert(backup_cid)
     # run db back up
     backup_filename = db.run_backup()
     try:
@@ -40,7 +43,9 @@ def run(db, flow, ldap_tid, backup_cid):
 
 
 def restore(flow, ldap_tid, backup_cid):
-    """If available, restore the local DB from the backup channel."""
+    """If available, restore the local DB from the
+    backup private channel.
+    """
     assert(flow)
     assert(ldap_tid)
     assert(backup_cid)

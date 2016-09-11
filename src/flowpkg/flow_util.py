@@ -14,6 +14,7 @@ LOG = logging.getLogger("flow_util")
 
 
 def create_flow_object(config):
+    """Creates and returns the flow object using the given 'config' dict."""
     flow_config = {
         "host": config.get("flow-service-host") or
         utils.DEFAULT_FLOW_SERVICE_HOST,
@@ -39,6 +40,8 @@ def create_flow_object(config):
 
 
 def get_ldap_team_id(flow):
+    """Return the LDAP Team Id.
+    (the DMA is member of only one team, the LDAP Team)."""
     teams = flow.enumerate_orgs()
     if len(teams) == 1:
         return teams[0]["id"]
@@ -86,6 +89,9 @@ def is_owner_channel(flow, channel_id):
 
 
 def add_admins_to_channel(flow, ldap_tid, cid):
+    """Add LDAP Team admins to the given channel.
+    They are added to the channel if they are not current member
+    and they weren't banned from it."""
     account_id = flow.account_id()
     ldap_admins = [
         member["accountId"]
@@ -108,6 +114,9 @@ def add_admins_to_channel(flow, ldap_tid, cid):
 
 
 def channel_present_past_members(flow, cid):
+    """Returns the set of past and present members of the given channel.
+    It returns a set with the account ids of the members.
+    """
     members = [
         member["accountId"]
         for member in
@@ -117,6 +126,9 @@ def channel_present_past_members(flow, cid):
 
 
 def team_present_members(flow, tid):
+    """Returns the set of current members of the given team id.
+    It returns a set with the account ids of the members.
+    """
     members = [
         member["accountId"]
         for member in
@@ -126,6 +138,9 @@ def team_present_members(flow, tid):
 
 
 def team_past_members(flow, tid):
+    """Returns the set of past members of the given team.
+    It returns a set with the account ids of the members.
+    """
     present_members = team_present_members(flow, tid)
     members = [
         member["accountId"]
@@ -137,6 +152,10 @@ def team_past_members(flow, tid):
 
 
 def add_account_to_channels(flow, account_id, tid, cids):
+    """Adds the given account to the given channel list.
+    It adds the account only if they are not past or
+    present member of the channels.
+    """
     for cid in cids:
         past_present_members = channel_present_past_members(flow, cid)
         if account_id not in past_present_members:
@@ -149,6 +168,12 @@ def add_account_to_channels(flow, account_id, tid, cids):
 
 
 def add_account_to_team(flow, account_id, tid):
+    """Adds the given account to the given team id.
+    It adds the account only if the account is not past or
+    present member of the team.
+    Returns True if the account was added or already a member,
+    returns False if the account is banned from the team.
+    """
     present_members = team_present_members(flow, tid)
     if account_id not in present_members:
         past_members = team_past_members(flow, tid)
@@ -169,7 +194,7 @@ def add_account_to_team(flow, account_id, tid):
 
 
 def add_account_to_team_chans(flow, account_id, tid, channel_ids):
-    # Add account to team first
+    """Add account to the given team and channels."""
     added_to_team = add_account_to_team(flow, account_id, tid)
     if not added_to_team:
         return
@@ -177,6 +202,7 @@ def add_account_to_team_chans(flow, account_id, tid, channel_ids):
 
 
 def get_prescribed_cids(flow, ldap_tid):
+    """Return the list of the DMA prescribed channels (channel ids)."""
     prescribed_channel_ids = [
         channel["id"] for channel in flow.enumerate_channels(ldap_tid)
         if is_channel_admin(flow, channel["id"]) and
@@ -186,6 +212,9 @@ def get_prescribed_cids(flow, ldap_tid):
 
 
 def rescan_accounts_on_channel(flow, ldap_tid, cid, accounts):
+    """Performs a rescan of the given accounts on the given channel.
+    It adds accounts to the channel if they are not yet a member of it.
+    """
     past_present_members = channel_present_past_members(
         flow,
         cid,
@@ -204,6 +233,10 @@ def rescan_accounts_on_channel(flow, ldap_tid, cid, accounts):
 
 
 def rescan_accounts_on_channels(flow, db, ldap_tid, cids):
+    """Performs a rescan on the local DB accounts, by checking
+    that all accounts are member of the given 'cids'.
+    If they are not member, they are added to the channels.
+    """
     if not cids or not db:
         return
     accounts = db.get_enabled_ldaped_accounts()
@@ -214,6 +247,9 @@ def rescan_accounts_on_channels(flow, db, ldap_tid, cids):
 
 
 def check_flow_connection(flow, tid, cid):
+    """Check connection to the flow service by sending a test message
+    to the DMA private test channel.
+    """
     flow.send_message(
         tid,
         cid,

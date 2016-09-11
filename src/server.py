@@ -79,10 +79,12 @@ class Server(object):
             os.mkdir(config_dir_path)
 
     def set_log_dest(self):
+        """Updates the server log destination."""
         log_dest = self.config.get("log-dest")
         app_log.set_log_destination(log_dest)
 
     def set_verbose(self):
+        """Updates the server verbose mode."""
         verbose = self.config.get("verbose") == "yes"
         app_log.set_log_debug(verbose)
 
@@ -128,6 +130,7 @@ class Server(object):
         self.cron = cron.Cron()
 
     def init_dma(self):
+        """Initializes the DMA manager object."""
         self.dma_manager = dma_manager.DMAManager(self)
 
     def set_ldap_sync_mins_from_config(self):
@@ -136,6 +139,7 @@ class Server(object):
         self.cron.update_task_frequency(minutes, self.ldap_sync.run_sync)
 
     def set_ldap_sync_on_from_config(self):
+        """Sets the LDAP sync on/off state from the config."""
         sync_on = self.config.get("ldap-sync-on")
         if sync_on == "yes":
             self.ldap_sync_on.set()
@@ -143,7 +147,8 @@ class Server(object):
             self.ldap_sync_on.clear()
 
     def init_ldap_sync(self):
-        """Initializes the ldap sync process and schedules it."""
+        """Initializes the ldap sync process and schedules it.
+        It also registers the ldap-sync config callbacks."""
         LOG.debug("initializing ldap sync scheduling")
         self.ldap_sync = ldap_sync.LDAPSync(self)
         self.config.register_callback(

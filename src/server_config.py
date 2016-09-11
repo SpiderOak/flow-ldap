@@ -69,11 +69,6 @@ class ServerConfig(object):
         self.config_dict = {}
         self.trigger_callbacks = {}
         self.sync_config()
-        self.check_required_configs()
-
-    def check_required_configs(self):
-        """TODO: fail if required config values not present."""
-        pass
 
     def sync_config(self):
         """Load from config file into internal dict."""
@@ -85,12 +80,16 @@ class ServerConfig(object):
         self.lock.release()
 
     def get(self, var):
+        """Returns the value for the given config variable name."""
         self.lock.acquire()
         value = self.config_dict.get(var)
         self.lock.release()
         return value
 
     def get_list(self, var):
+        """Returns the value for the given config variable name as a list.
+        Currently used for 'excluded-accounts' config.
+        """
         ret_list = []
         value = self.get(var)
         if value:
@@ -98,6 +97,7 @@ class ServerConfig(object):
         return ret_list
 
     def get_key_values(self):
+        """Returns the current configuration values for all variables."""
         self.lock.acquire()
         ret_config_dict = {
             _SERVER_CONFIG_GROUP_NAME: {},
@@ -112,12 +112,16 @@ class ServerConfig(object):
         return ret_config_dict
 
     def register_callback(self, variables_iter, trigger_func):
+        """Registers the given trigger_func to be executed when
+        the variables in variables_iter are updated.
+        """
         self.lock.acquire()
         for variable in variables_iter:
             self.trigger_callbacks[variable] = trigger_func
         self.lock.release()
 
     def store_config(self):
+        """Saves the current configuration to a cfg file."""
         LOG.debug("storing config")
         cfg = RawConfigParser()
         cfg.add_section(utils.SERVER_CONFIG_SECTION)
@@ -127,6 +131,10 @@ class ServerConfig(object):
             cfg.write(config_file)
 
     def set_key_value(self, key, value):
+        """Updates the value of the given key.
+        It triggers the registered triggers and also stores the config
+        to a file after the update.
+        """
         self.lock.acquire()
         if key not in self.config_dict:
             self.lock.release()

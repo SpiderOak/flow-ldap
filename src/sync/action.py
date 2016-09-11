@@ -1,7 +1,7 @@
 """
 action.py
 
-TODO
+Action classes to execute on an ldap-sync run.
 """
 
 import logging
@@ -15,7 +15,9 @@ LOG = logging.getLogger("action")
 
 
 class Action(object):
-    """TODO"""
+    """Main abstract action class.
+    It represents an action to be executed on the ldap-sync run.
+    """
 
     def __init__(self, ldap_sync, ldap_account):
         self.ldap_sync = ldap_sync
@@ -23,10 +25,11 @@ class Action(object):
         self.log = logging.getLogger(self.name())
 
     def name(self):
+        """Returns the name of the action class."""
         return self.__class__.__name__
 
     def execute(self):
-        """TODO"""
+        """Action to execute on this action class."""
         LOG.error(
             "%s: execute not implemented",
             self.name(),
@@ -34,6 +37,7 @@ class Action(object):
         return False
 
     def __repr__(self):
+        """String representation of actions to print to logging."""
         str_repr = "{%s:" % self.name()
         if self.ldap_account:
             row_str = "["
@@ -53,6 +57,8 @@ class UserAccountSetup(Action):
     """
 
     def add_account_to_team_chans(self, account_id):
+        """Adds the given account to the LDAP Team and
+        prescribed channels."""
         cids = flow_util.get_prescribed_cids(
             self.ldap_sync.flow,
             self.ldap_sync.dma_manager.ldap_team_id,
@@ -129,8 +135,16 @@ class UserAccountSetup(Action):
 
 
 class UpdateLock(Action):
+    """Updates the internal lock state and also
+    updates the lock state on the flow service.
+    """
 
     def execute(self):
+        """Updates the 'enabled' and 'lock_state' on the local DB
+        and updates the lock state in the flow service.
+        It only locks/unlocks a Semaphor account if the current lock_state
+        is not ldap-locked.
+        """
         username = self.ldap_account["email"]
         lock_type = Flow.UNLOCK \
             if self.ldap_account["enabled"] \

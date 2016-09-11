@@ -30,7 +30,7 @@ def supported_log_destinations():
     elif sys.platform == "darwin":
         return ["file"]
     elif sys.platform == "win32":
-        return ["file", "event"]  # TODO swap
+        return ["event", "file"]
     return []
 
 
@@ -110,6 +110,7 @@ def setup_common_logging():
 
 
 def get_platform_handlers():
+    """Returns the supported log handlers for the platform."""
     supported = supported_log_destinations()
     handlers = {}
     for log_type in supported:
@@ -123,11 +124,13 @@ def get_platform_handlers():
 
 
 def setup_server_logging():
+    """Setups the logging configuration for the server mode."""
     setup_common_logging()
     PLATFORM_HANDLERS.update(get_platform_handlers())
 
 
 def set_log_debug(enable=True):
+    """Setups the verbose mode of the logging configuration."""
     ROOT_LOGGER.setLevel(logging.DEBUG if enable else logging.INFO)
 
 
@@ -148,7 +151,7 @@ def set_log_destination(destination):
 
 
 def setup_cli_logging(debug):
-    """Setup logging configuration for the CLI mode."""
+    """Setups logging configuration for the CLI mode."""
     setup_common_logging()
     set_log_debug(debug)
     _console_handler = configured_console_handler(detailed=False)
@@ -156,7 +159,9 @@ def setup_cli_logging(debug):
 
 
 def configure_flow_log(flow_remote_logger):
-    """Configure logging errors into the log channel."""
+    """Configures logging to log ERRORs to the LOG channel
+    using the flow_remote_logger.
+    """
     flow_log_handler = FlowLogChannelHandler(flow_remote_logger)
 
     class OnlyError(logging.Filter):

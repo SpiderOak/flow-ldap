@@ -85,6 +85,7 @@ class HTTPRequestHandler(object):
             return http_exception
 
     def __call__(self, environ, start_response):
+        """Implementation of the function method for the handler."""
         request = Request(environ)
         response = self.dispatch_request(request)
         return response(environ, start_response)

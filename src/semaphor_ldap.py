@@ -31,6 +31,7 @@ def run_cli(options):
 
 
 def add_cli_options(parser):
+    """Adds the cli options to the given parser."""
     # Add API methods
     cli_subparsers = parser.add_subparsers(
         title="Commands", metavar="{API COMMAND FROM THE LIST}")
@@ -38,13 +39,18 @@ def add_cli_options(parser):
 
 
 def create_generic_arg_parser():
+    """Creates the arg parser for the semaphor-ldap application."""
     parser = argparse.ArgumentParser(
         description="%s is a server/cli app to enable the use of "
                     "Semaphor with Customer LDAP credentials." % (
                         os.path.basename(sys.argv[0])
                     ),
     )
-    parser.add_argument("--version", action="version", version=utils.VERSION)
+    parser.add_argument(
+        "--version",
+        action="version",
+        version=utils.VERSION,
+    )
     # Generic config
     parser.add_argument(
         "--debug",

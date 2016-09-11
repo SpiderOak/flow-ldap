@@ -12,6 +12,7 @@ LOG = logging.getLogger("flow_notify")
 
 
 class FlowNotify(threading.Thread):
+    """Thread class to process incoming server notifications."""
 
     def __init__(self, dma_manager):
         super(FlowNotify, self).__init__()
@@ -20,6 +21,7 @@ class FlowNotify(threading.Thread):
         self.loop_listener.set()
 
     def add_handler(self, handler):
+        """Asociate the given handler to a certain type of notifications."""
         for notif_type in handler.notif_types:
             self.dma_manager.flow.register_callback(
                 notif_type,
@@ -27,9 +29,11 @@ class FlowNotify(threading.Thread):
             )
 
     def stop(self):
+        """Terminate the FlowNotify thread."""
         self.loop_listener.clear()
 
     def run(self):
+        """Run the FlowNotify thread."""
         LOG.debug("flow notify thread started")
         LOG.debug("wait flow setup")
         self.dma_manager.ready.wait()

@@ -30,6 +30,9 @@ LOG = logging.getLogger("flow_manager")
 
 
 class DMAManager(object):
+    """Manages the Directory Management Account Semaphor
+    account for the semaphor-ldap server.
+    """
 
     def __init__(self, server):
         self.config = server.config
@@ -52,11 +55,17 @@ class DMAManager(object):
         self.init_handlers()
 
     def set_db_backup_mins_from_config(self):
+        """Sets the db backup task frequency using the
+        current configuration 'db-backup-minutes' value.
+        """
         minutes = int(self.config.get("db-backup-minutes"))
         LOG.debug("updating backup cron to %d minutes", minutes)
         self.cron.update_task_frequency(minutes, self.run_backup)
 
     def schedule_backup(self):
+        """Register 'db-backup-minutes' config callback
+        and update task frequency.
+        """
         self.config.register_callback(
             ["db-backup-minutes"],
             self.set_db_backup_mins_from_config,
@@ -64,6 +73,7 @@ class DMAManager(object):
         self.set_db_backup_mins_from_config()
 
     def init_flow(self):
+        """Initialize the flow object and try to start up."""
         LOG.debug("initializing the flow service")
         self.flow = flow_util.create_flow_object(
             self.config,
@@ -71,15 +81,18 @@ class DMAManager(object):
         self.start_up()
 
     def init_remote_logger(self):
+        """Initialize the flow remote ERROR logger."""
         LOG.debug("initializing the remote flow logger")
         self.flow_remote_logger = FlowRemoteLogger(self)
         app_log.configure_flow_log(self.flow_remote_logger)
 
     def init_flow_notify(self):
+        """Initialize the flow notification listener."""
         LOG.debug("initializing the flow notify thread")
         self.flow_notify = FlowNotify(self)
 
     def init_handlers(self):
+        """Initialize the flow notification handlers."""
         LOG.debug("initializing flow notify handlers")
         self.ldap_bind_request_handler = LDAPBindRequestHandler(self)
         self.cme_handler = ChannelMemberEventHandler(self)
@@ -91,12 +104,16 @@ class DMAManager(object):
         self.flow_notify.add_handler(self.tme_handler)
 
     def start(self):
+        """Start the notification listener thread and
+        the remote logger thread.
+        """
         LOG.debug("starting flow threads")
         self.flow_notify.start()
         self.flow_remote_logger.start()
         self.threads_running = True
 
     def stop(self):
+        """Stop threads and terminate the flow object."""
         LOG.debug("stopping the dma manager")
         if self.threads_running:
             self.flow_notify.stop()
@@ -108,6 +125,9 @@ class DMAManager(object):
             self.flow.terminate()
 
     def finalize_flow_config(self):
+        """After the DMA account is up and running this method
+        is executed to finish the flow setup.
+        """
         # Add admins to log channels
         flow_util.add_admins_to_channel(
             self.flow,
@@ -120,6 +140,9 @@ class DMAManager(object):
         self.schedule_backup()
 
     def check_flow_connection(self):
+        """Performs a test operation on the flow service,
+        it raises an exception if it wasn't able to connect.
+        """
         if not self.ready.is_set():
             raise Exception("DMA is not configured yet")
         flow_util.check_flow_connection(
@@ -134,6 +157,7 @@ class DMAManager(object):
         return self.flow.keyring_fingerprint()
 
     def start_up(self):
+        """Starts up (if available) the DMA local account."""
         LOG.debug("starting up dma account")
         try:
             self.flow.start_up()
@@ -146,6 +170,10 @@ class DMAManager(object):
             LOG.debug("start_up failed: '%s'", str(start_up_err))
 
     def create_device(self, flow_username, flow_password):
+        """Creates a local device for the given username and
+        password. It is used to start an existing DMA on a new
+        device.
+        """
         assert(flow_username)
         assert(flow_password)
         LOG.debug("creating dma device")
@@ -167,12 +195,17 @@ class DMAManager(object):
             raise
 
     def start_setup_team_channels(self, device_created=False):
+        """Starts a separate thread to setup the LDAP Team and
+        DMA channels. To be used when creating the DMA or creating
+        a new device for the DMA.
+        """
         threading.Thread(
             target=self.setup_team_channels,
             args=(device_created,),
         ).start()
 
     def setup_team_channels(self, device_created=False):
+        """Creates/Configures the LDAP Team and DMA channels."""
         LOG.debug("setting up ldap team and channels")
         try:
             if device_created:
@@ -206,6 +239,10 @@ class DMAManager(object):
         )
 
     def create_dma_account(self, dmk):
+        """Create the DMA account and return the response.
+        The reponse dict contains the DMA 'username',
+        'password' and 'orgId' (LDAP Team Id).
+        """
         assert(dmk)
         try:
             LOG.debug("creating dma")
@@ -219,8 +256,8 @@ class DMAManager(object):
             raise
 
     def wait_for_member(self):
-        """Send the Team Join Request to the
-        LDAP team and wait for the notification.
+        """Wait for an LDAP team member
+        to make the DMA an LDAP team member.
         """
         LOG.debug("waiting for LDAP team join request approval")
         while True:
@@ -253,6 +290,9 @@ class DMAManager(object):
         self.ldap_team_id = ldap_team_id
 
     def setup_ldap_channels(self):
+        """Create/Set DMA LDAP channels, in particular
+        the backup, log and test channels.
+        """
         backup_channel_name = self.gen_channel_name(
             utils.DMA_BACKUP_CHANNEL_SUFFIX_NAME,
         )
@@ -280,10 +320,13 @@ class DMAManager(object):
         self.test_cid, _ = self.get_channel(
             self.ldap_team_id,
             test_channel_name,
-            private=False,
+            private=True,
         )
 
     def gen_channel_name(self, suffix):
+        """Generates a channel name from the
+        DMA username and the provided suffix.
+        """
         dma_username = self.flow.identifier()["username"]
         return "%s%s" % (
             dma_username,
@@ -291,6 +334,12 @@ class DMAManager(object):
         )
 
     def get_channel(self, tid, channel_name, private):
+        """Creates/Gets the channel id for the given channel_name.
+        If it doesn't exists, the method creates the channel first.
+        If private is True, then it will return a private channel,
+        meaning a channel whose only member is the DMA (used for
+        the 'backup' and 'test' channels).
+        """
         account_id = self.flow.account_id()
         channels = self.flow.enumerate_channels(tid)
         # Check for existence
@@ -316,6 +365,11 @@ class DMAManager(object):
         return cid, created
 
     def wait_for_sync(self):
+        """Waits for the local device to sync.
+        Used when creating a device for an existing DMA.
+        After the 'sync', it is safe to start
+        enumerating teams/channels.
+        """
         sync_done = {"value": False}
 
         def notify_event_handler(_notif_type, notif_data):
@@ -332,6 +386,7 @@ class DMAManager(object):
         LOG.info("flow local sync done")
 
     def set_dma_profile(self):
+        """Sets the DMA profile item."""
         LOG.debug("setting dma profile")
         profile_img_filename = os.path.join(
             app_platform.get_default_img_path(),
@@ -352,6 +407,7 @@ class DMAManager(object):
         self.flow.set_profile("profile", content)
 
     def run_backup(self):
+        """Performs the local DB backup process."""
         if not self.ready.is_set():
             LOG.debug("skipping local db backup, flow not ready")
             return
@@ -364,11 +420,12 @@ class DMAManager(object):
         )
 
     def send_fingerprint(self):
+        """Sends the DMA fingerprint to the LOG channel."""
         fpr = self.flow.keyring_fingerprint()
         self.flow.send_message(
             self.ldap_team_id,
             self.log_cid,
             "Semaphor Sign-In URI: %s" % (
-                utils.URI_FINGERPRINT % {"fp": fpr}
+                utils.URI_FINGERPRINT % {"fp": fpr},
             ),
         )

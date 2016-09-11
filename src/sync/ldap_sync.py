@@ -2,7 +2,6 @@
 ldap_sync.py
 
 LDAP sync operation.
-TODO: document here all that happens on a sync.
 """
 
 import logging
@@ -70,6 +69,7 @@ class LDAPSync(object):
                 )
 
     def pre_checks(self):
+        """Runs a few checks before running the ldap-sync."""
         if not self.flow_ready.is_set():
             LOG.info("flow not ready, skip run")
             return False
@@ -79,12 +79,14 @@ class LDAPSync(object):
         return True
 
     def trigger_sync(self):
+        """Trigger an ldap-sync from a separate thread."""
         LOG.debug("triggering a ldap sync")
         threading.Thread(
             target=self.run_sync,
         ).start()
 
     def run_sync(self):
+        """Method to run the ldap-sync from a separate thread."""
         self.lock.acquire()
         try:
             self.run()
@@ -92,7 +94,11 @@ class LDAPSync(object):
             self.lock.release()
 
     def run(self):
-        """Runs the actual LDAP sync operation."""
+        """Runs the actual LDAP sync operation:
+        1. Get account entries from LDAP.
+        2. Calculate delta actions to execute.
+        3. Execute actions (log ERROR with actions that failed).
+        """
         if not self.pre_checks():
             return
         LOG.debug("start")

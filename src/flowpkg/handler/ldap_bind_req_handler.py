@@ -35,6 +35,10 @@ class LDAPBindRequestHandler(object):
 
 
 class LDAPBindProcessor(threading.Thread):
+    """Processes the user bind request.
+    It processes device creation on LDAPed accounts
+    and LDAP join of existing accounts.
+    """
 
     def __init__(self, ldap_bind_handler, notif_data):
         super(LDAPBindProcessor, self).__init__()

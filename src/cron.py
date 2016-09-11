@@ -1,7 +1,7 @@
 """
 cron.py
 
-Runs the scheduled tasks.
+Runs scheduled tasks.
 """
 
 import time
@@ -15,7 +15,7 @@ LOG = logging.getLogger("cron")
 
 
 class Cron(threading.Thread):
-    """Runs the LDAP sync operation."""
+    """Runs a thread to execute scheduled operations."""
 
     def __init__(self):
         super(Cron, self).__init__()
@@ -23,7 +23,7 @@ class Cron(threading.Thread):
         self.loop_schedule.set()
 
     def stop(self):
-        """Finishes the execution of the LDAP sync thread."""
+        """Finishes the execution of the cron thread."""
         self.loop_schedule.clear()
 
     def update_task_frequency(self, minutes, task_function):
@@ -56,6 +56,6 @@ class Cron(threading.Thread):
             try:
                 schedule.run_pending()
             except Exception as exception:
-                LOG.error("cron job failed: %s", exception)
+                LOG.error("cron job failed: '%s'", exception)
             time.sleep(1)
         LOG.debug("cron thread finished")

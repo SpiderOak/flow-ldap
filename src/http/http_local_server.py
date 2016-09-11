@@ -42,9 +42,11 @@ class HTTPServer(threading.Thread):
 
     @staticmethod
     def gen_auth_token():
+        """Generate and return the auth token for this server."""
         return binascii.hexlify(os.urandom(16))
 
     def stop(self):
+        """Stop this HTTP server."""
         self.keep_running.clear()
 
     def run(self):
