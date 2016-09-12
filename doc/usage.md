@@ -14,7 +14,7 @@ The `LDAP Team` is the Semaphor Team configured in the LDAP setup. It is the tea
 ### Admin Accounts
 Semaphor `LDAP Team` admins are considered admins of the domain by the Semaphor-LDAP. These accounts are automatically added to the LOG channel.
 ### Prescribed Channels 
-These are channels within the LDAP Team to which accounts are automatically added to. To turn a channel into a prescribed channel, an admin must make the DMA an admin of such channel. Admin accounts are the only accounts allowed to add the DMA to a channel.
+These are channels within the LDAP Team to which accounts are automatically added to. To turn a channel into a prescribed channel, an admin must make the `DMA` an admin of such channel. Admin accounts are the only accounts allowed to add the `DMA` to a channel.
 ### Log Channel
 Semaphor-LDAP will send ERROR messages to the log channel. Only admins will be added to such channel.
 ### Excluded Accounts
@@ -49,7 +49,24 @@ Use the `--help` option to get a list of the available client commands:
 $ semaphor-ldap client --help
 ```
 
--------
+## Semaphor-LDAP Server Configuration Steps
+
+Basically, the steps to integrate your LDAP server with Semaphor are:
+  1. Create a Team on Semaphor.
+  2. Go to `Manage Team` -> `Setup LDAP`.
+  3. Perform the `Setup LDAP` web process. After completing the setup you are provided with a `Directory Management Key` (aka `DMK`).
+  4. Start the server in the background (we use the client to configure the server).
+  5. Configure the Semaphor-LDAP server with correct LDAP configuration to connect to your LDAP server.
+  6. Create the `Directory Management Account` (aka `DMA`) for your domain with the `create-account` client command using the provided `DMK`.
+  7. Accept the `DMA` as member of the LDAP Team, and also make it an admin of the team.
+  8. Wait for or trigger an `ldap-sync`, which will create Semaphor accounts for all LDAP accounts.
+  9. Leave the Semaphor-LDAP server running in the background, it will perform the following operations:
+    - Allow the creation of devices using LDAP credentials.
+    - Join existing Semaphor accounts in the domain to LDAP.
+    - Lock/Unlock Semaphor accounts by looking at the LDAP enabled state.
+    - Automatically add accounts to the LDAP team and prescribed channels.
+
+### Step by Step Guide
 
 Once the server is running we can check its current state via the `check-status` command.
 On the first run you will probably see the following output:
@@ -142,8 +159,8 @@ If everything looks good, we can continue with the flow setup.
 
 -------
 
-We can now create the Diretory Management Account (aka DMA) to manage the domain:
-To create a DMA we need the Directory Management Key (aka DMK)
+We can now create the `Diretory Management Account` (aka `DMA`) to manage the domain.
+To create a `DMA` we need the `Directory Management Key` (aka `DMK`).
 You need to securely store the generated username and recovery-key.
 ```
 $ semaphor-ldap client create-account --dmk NNBTWOQMSTHOF27VTODWKZF63CLUVSS4A22QNK4WEHYQNS7BLTHQ
@@ -158,7 +175,7 @@ To finish the setup please accept the request and make the DMA an admin.
 
 -------
 
-Now you need to go to Semaphor and accept the DMA Team Join Request to the LDAP Team and also make it an admin of the Team.
+Now you need to go to Semaphor and accept the `DMA` Team Join Request to the LDAP Team and also make it an admin of the Team.
 After all this, we should see an "OK" on the flow status
 ```
 $ semaphor-ldap client check-status
