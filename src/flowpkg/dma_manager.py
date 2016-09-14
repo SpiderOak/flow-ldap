@@ -169,7 +169,7 @@ class DMAManager(object):
                 "local account '%s' started",
                 self.flow.identifier()["username"],
             )
-            self.setup_team_channels()
+            self.start_setup_team_channels()
         except Flow.FlowError as start_up_err:
             LOG.debug("start_up failed: '%s'", str(start_up_err))
 
@@ -231,11 +231,14 @@ class DMAManager(object):
         and adds remaining accounts to them.
         """
         LOG.debug("start scan accounts on LDAP team and prescribed channels")
-        flow_util.rescan_accounts(
-            self.flow,
-            self.db,
-            self.ldap_team_id,
-        )
+        try:
+            flow_util.rescan_accounts(
+                self.flow,
+                self.db,
+                self.ldap_team_id,
+            )
+        except Exception as exception:
+            LOG.error("scan_accounts failed: '%s'", exception)
         LOG.debug("finish scan accounts")
 
     def create_dma_account(self, dmk):

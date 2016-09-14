@@ -213,9 +213,6 @@ class Server(object):
             - Starts the Bind Request Handler thread.
             - Starts the CLI HTTP request processing (on main thread)
         """
-        # Try an initial ldap sync
-        self.ldap_sync.run()
-
         # Start cron thread, auth listener thread and remote logger thread
         self.cron.start()
         self.dma_manager.start()
