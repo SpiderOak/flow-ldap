@@ -5,7 +5,7 @@ create table if not exists ldap_account (
     /* LDAP account unique identifier */
     uniqueid varchar(128) not null,
     /* LDAP email/username */
-    email varchar(255) not null,
+    email varchar(255) not null collate nocase,
     /* LDAP state
      * If the semaphor entry is ldaped and this column is False, then
      * the account is under the control of the DMA

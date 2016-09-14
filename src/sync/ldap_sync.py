@@ -6,6 +6,7 @@ LDAP sync operation.
 
 import logging
 import threading
+import time
 
 from src.sync import action
 
@@ -98,10 +99,12 @@ class LDAPSync(object):
         1. Get account entries from LDAP.
         2. Calculate delta actions to execute.
         3. Execute actions (log ERROR with actions that failed).
+        4. Perform an extra scan over the ldaped accounts.
         """
         if not self.pre_checks():
             return
         LOG.debug("start")
+        start_sync_time = time.time()
         try:
             ldap_accounts = self.get_ldap_userlist()
         except Exception as exception:
@@ -112,4 +115,9 @@ class LDAPSync(object):
         actions = self.changes_into_actions(delta_changes)
         LOG.debug("actions to execute: %s", actions)
         self.execute_actions(actions)
-        LOG.debug("done")
+        # Perform an extra scan over the accounts
+        # It will add all ldaped accounts to LDAP team and prescribed channels
+        # This scan is needed to retry adding accounts to team and channels
+        # if they failed in the past for some reason.
+        self.dma_manager.scan_accounts()
+        LOG.debug("done, elapsed=%.2fs", time.time() - start_sync_time)

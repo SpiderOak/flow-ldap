@@ -134,10 +134,14 @@ class DMAManager(object):
             self.ldap_team_id,
             self.log_cid,
         )
-        # Perform scan to add db accounts (if any) to prescribed channels
-        self.scan_prescribed_channels()
+        # Perform scan to add db accounts (if any) 
+        # to LDAP team and prescribed channels
+        self.scan_accounts()
         self.ready.set()
         self.schedule_backup()
+        # After a successful DMA setup
+        # let's API timeout for operations to 15 seconds
+        self.flow.set_api_timeout(utils.FLOW_API_TIMEOUT)
 
     def check_flow_connection(self):
         """Performs a test operation on the flow service,
@@ -222,21 +226,17 @@ class DMAManager(object):
         except Exception as exception:
             LOG.error("setup_team_channels failed: '%s'", str(exception))
 
-    def scan_prescribed_channels(self):
-        """Performs a scan over the prescribed channels
+    def scan_accounts(self):
+        """Performs a scan over the LDAP team and prescribed channels
         and adds remaining accounts to them.
         """
-        LOG.debug("scan prescribed channels")
-        prescribed_channel_ids = flow_util.get_prescribed_cids(
-            self.flow,
-            self.ldap_team_id,
-        )
-        flow_util.rescan_accounts_on_channels(
+        LOG.debug("start scan accounts on LDAP team and prescribed channels")
+        flow_util.rescan_accounts(
             self.flow,
             self.db,
             self.ldap_team_id,
-            prescribed_channel_ids,
         )
+        LOG.debug("finish scan accounts")
 
     def create_dma_account(self, dmk):
         """Create the DMA account and return the response.

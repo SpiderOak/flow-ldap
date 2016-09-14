@@ -35,7 +35,6 @@ def create_flow_object(config):
         if value is not None
     }
     flow = Flow(**flow_args)
-    flow.set_api_timeout(utils.FLOW_API_TIMEOUT)
     return flow
 
 
@@ -232,18 +231,63 @@ def rescan_accounts_on_channel(flow, ldap_tid, cid, accounts):
         )
 
 
-def rescan_accounts_on_channels(flow, db, ldap_tid, cids):
-    """Performs a rescan on the local DB accounts, by checking
-    that all accounts are member of the given 'cids'.
-    If they are not member, they are added to the channels.
+def rescan_accounts_on_team(flow, tid, accounts):
+    """Performs a rescan on the given accounts, by checking
+    that all accounts are member of the given team
+    If they are not member, they are added to the team.
+    It returns all the accounts that are now member of the team.
     """
-    if not cids or not db:
+    if not accounts:
+        return []
+    team_accounts = []
+    # Get present and past LDAP team members
+    present_members = team_present_members(flow, tid)
+    past_members = team_past_members(flow, tid)
+    # Scan over db accounts, and add accounts that are
+    # not member of the LDAP team.
+    for account_id in accounts:
+        if account_id not in present_members:
+            if account_id not in past_members:
+                flow.org_add_member(
+                    tid,
+                    account_id,
+                    "m",
+                )
+                team_accounts.append(account_id)
+            else:  # banned
+                LOG.debug(
+                    "account '%s' banned from LDAP team, not auto-adding to team.",
+                    flow.get_peer_from_id(account_id)["username"],
+                )
+        else:  # already member
+            team_accounts.append(account_id)
+    return team_accounts
+
+
+def rescan_accounts(flow, db, ldap_tid):
+    """Performs a rescan on the local DB accounts, by checking
+    that all accounts are member of the LDAP team and channels.
+    If they are not member, they are automatically added to 
+    the team and channels.
+    """
+    if not db:
         return
+    # Get accounts the bot controls
     accounts = db.get_enabled_ldaped_accounts()
     if not accounts:
         return
-    for cid in cids:
-        rescan_accounts_on_channel(flow, ldap_tid, cid, accounts)
+    # Rescan accounts on team
+    team_accounts = rescan_accounts_on_team(flow, ldap_tid, accounts)
+    if not team_accounts:
+        return
+    # Get current prescribed channels
+    prescribed_channel_ids = get_prescribed_cids(
+        flow,
+        ldap_tid,
+    )
+    # Rescan accounts on the given channels
+    for cid in prescribed_channel_ids:
+        rescan_accounts_on_channel(flow, ldap_tid, cid, team_accounts)
 
 
 def check_flow_connection(flow, tid, cid):
