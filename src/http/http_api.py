@@ -150,7 +150,10 @@ class HttpApi(object):
 
     def server_version(self):
         """Returns the version of the running server."""
-        return utils.VERSION
+        return "%s,backend=%s" % (
+            utils.VERSION,
+            self.dma_manager.flow.build_number(),
+        )
 
     @classmethod
     def get_apis(cls):

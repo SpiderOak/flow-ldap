@@ -78,7 +78,7 @@ def signal_handler(sig, frame):
     sys.exit will raise SystemExit that
     should be dealt with.
     """
-    LOG.debug("termination signal received")
+    LOG.info("termination signal received")
     sys.exit(0)
 
 

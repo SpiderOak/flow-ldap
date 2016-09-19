@@ -33,7 +33,7 @@ class Cron(threading.Thread):
         If minutes=0 then the task is disabled.
         - task_func : function object with the operation to run.
         """
-        LOG.debug(
+        LOG.info(
             "updating task frequency to %d minutes for '%s()'",
             minutes,
             task_function.__name__,
@@ -51,11 +51,11 @@ class Cron(threading.Thread):
 
     def run(self):
         """Runs the schedule loop."""
-        LOG.debug("cron thread started")
+        LOG.info("cron thread started")
         while self.loop_schedule.is_set():
             try:
                 schedule.run_pending()
             except Exception as exception:
                 LOG.error("cron job failed: '%s'", exception)
             time.sleep(1)
-        LOG.debug("cron thread finished")
+        LOG.info("cron thread finished")

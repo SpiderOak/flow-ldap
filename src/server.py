@@ -110,14 +110,14 @@ class Server(object):
 
     def init_db(self):
         """Initializes the db object"""
-        LOG.debug("initializing db")
+        LOG.info("initializing db")
         schema_file_name = self.config.get("local-db-schema") or \
             app_platform.get_default_schema_path()
         self.db = local_db.LocalDB(schema_file_name)
 
     def init_ldap(self):
         """Initializes LDAP from config values."""
-        LOG.debug("initializing ldap")
+        LOG.info("initializing ldap")
         self.ldap_factory = LDAPFactory(self.config)
         self.config.register_callback(
             server_config.LDAP_VARIABLES,
@@ -126,7 +126,7 @@ class Server(object):
 
     def init_cron(self):
         """Initializes the cron process."""
-        LOG.debug("initializing cron")
+        LOG.info("initializing cron")
         self.cron = cron.Cron()
 
     def init_dma(self):
@@ -149,7 +149,7 @@ class Server(object):
     def init_ldap_sync(self):
         """Initializes the ldap sync process and schedules it.
         It also registers the ldap-sync config callbacks."""
-        LOG.debug("initializing ldap sync scheduling")
+        LOG.info("initializing ldap sync scheduling")
         self.ldap_sync = ldap_sync.LDAPSync(self)
         self.config.register_callback(
             ["ldap-sync-minutes"],
@@ -229,7 +229,7 @@ class Server(object):
 
     def cleanup(self):
         """Server cleanup. Must be called before the program exits."""
-        LOG.debug('server cleanup start')
+        LOG.info("server cleanup start")
         if self.threads_running:
             self.cron.stop()
             self.cron.join()
@@ -237,7 +237,7 @@ class Server(object):
             self.http_server.stop()
             self.http_server.join()
         self.config.store_config()
-        LOG.debug('server cleanup done')
+        LOG.info("server cleanup done")
 
     @staticmethod
     def daemonize():

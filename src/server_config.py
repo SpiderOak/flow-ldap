@@ -72,7 +72,7 @@ class ServerConfig(object):
 
     def sync_config(self):
         """Load from config file into internal dict."""
-        LOG.debug("sync config")
+        LOG.info("sync config")
         cfg = RawConfigParser()
         cfg.read(self.config_file_path)
         self.lock.acquire()
@@ -122,7 +122,7 @@ class ServerConfig(object):
 
     def store_config(self):
         """Saves the current configuration to a cfg file."""
-        LOG.debug("storing config")
+        LOG.info("storing config")
         cfg = RawConfigParser()
         cfg.add_section(utils.SERVER_CONFIG_SECTION)
         for key, value in self.config_dict.items():

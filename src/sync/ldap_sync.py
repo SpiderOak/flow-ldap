@@ -81,7 +81,7 @@ class LDAPSync(object):
 
     def trigger_sync(self):
         """Trigger an ldap-sync from a separate thread."""
-        LOG.debug("triggering a ldap sync")
+        LOG.info("triggering a ldap sync")
         threading.Thread(
             target=self.run_sync,
         ).start()
@@ -103,21 +103,21 @@ class LDAPSync(object):
         """
         if not self.pre_checks():
             return
-        LOG.debug("start")
+        LOG.info("start")
         start_sync_time = time.time()
         try:
             ldap_accounts = self.get_ldap_userlist()
         except Exception as exception:
             LOG.error("Failed to get ldap userlist: '%s'", str(exception))
             return
-        LOG.debug("ldap accounts: %s", ldap_accounts)
+        LOG.info("ldap accounts: %s", ldap_accounts)
         delta_changes = self.server.db.delta(ldap_accounts)
         actions = self.changes_into_actions(delta_changes)
-        LOG.debug("actions to execute: %s", actions)
+        LOG.info("actions to execute: %s", actions)
         self.execute_actions(actions)
         # Perform an extra scan over the accounts
         # It will add all ldaped accounts to LDAP team and prescribed channels
         # This scan is needed to retry adding accounts to team and channels
         # if they failed in the past for some reason.
         self.dma_manager.scan_accounts()
-        LOG.debug("done, elapsed=%.2fs", time.time() - start_sync_time)
+        LOG.info("done, elapsed=%.2fs", time.time() - start_sync_time)

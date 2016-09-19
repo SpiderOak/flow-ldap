@@ -23,7 +23,7 @@ class LDAPFactory(object):
 
     def reload_config(self):
         """Reloads LDAP configuration from self.config."""
-        LOG.debug("reloading ldap config")
+        LOG.info("reloading ldap config")
         self.lock.acquire()
         self.uri = self.config.get("uri")
         self.base_dn = self.config.get("base-dn")

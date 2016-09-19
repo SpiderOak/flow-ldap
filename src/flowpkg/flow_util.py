@@ -255,7 +255,7 @@ def rescan_accounts_on_team(flow, tid, accounts):
                 )
                 team_accounts.append(account_id)
             else:  # banned
-                LOG.debug(
+                LOG.info(
                     "account '%s' banned from LDAP team, not auto-adding to team.",
                     flow.get_peer_from_id(account_id)["username"],
                 )
@@ -267,7 +267,7 @@ def rescan_accounts_on_team(flow, tid, accounts):
 def rescan_accounts(flow, db, ldap_tid):
     """Performs a rescan on the local DB accounts, by checking
     that all accounts are member of the LDAP team and channels.
-    If they are not member, they are automatically added to 
+    If they are not member, they are automatically added to
     the team and channels.
     """
     if not db:

@@ -34,16 +34,16 @@ class FlowNotify(threading.Thread):
 
     def run(self):
         """Run the FlowNotify thread."""
-        LOG.debug("flow notify thread started")
-        LOG.debug("wait flow setup")
+        LOG.info("flow notify thread started")
+        LOG.info("wait flow setup")
         self.dma_manager.ready.wait()
         if not self.loop_listener.is_set():
             return
-        LOG.debug("flow ready, start notification listener")
+        LOG.info("flow ready, start notification listener")
         while self.loop_listener.is_set():
             self.dma_manager.flow.process_one_notification(timeout_secs=0.05)
             error = self.dma_manager.flow.get_notification_error(
                 timeout_secs=0.05)
             if error and "Connection aborted" not in error:
                 LOG.error("notification error: '%s'", error)
-        LOG.debug("flow notify thread finished")
+        LOG.info("flow notify thread finished")

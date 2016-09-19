@@ -24,7 +24,7 @@ class LocalDB(object):
 
     def __init__(self, schema_file_name, db_file_name=""):
         self.db_file_name = db_file_name or app_platform.local_db_path()
-        LOG.debug("using '%s' database", self.db_file_name)
+        LOG.info("using '%s' database", self.db_file_name)
         db_conn = self._get_connection()
         with open(schema_file_name, "r") as schema_file:
             db_conn.executescript(schema_file.read())
@@ -314,7 +314,7 @@ class LocalDB(object):
         )
         row = cur.fetchone()
         if not row:
-            LOG.debug(
+            LOG.error(
                 "update_lock(%s): account does not exist.",
                 uniqueid,
             )

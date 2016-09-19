@@ -63,7 +63,7 @@ class UserAccountSetup(Action):
             self.ldap_sync.flow,
             self.ldap_sync.dma_manager.ldap_team_id,
         )
-        LOG.debug("prescribed channels: %s", cids)
+        LOG.info("prescribed channels: %s", cids)
         flow_util.add_account_to_team_chans(
             self.ldap_sync.flow,
             account_id,

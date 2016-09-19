@@ -131,7 +131,7 @@ def setup_server_logging():
 
 def set_log_debug(enable=True):
     """Setups the verbose mode of the logging configuration."""
-    ROOT_LOGGER.setLevel(logging.DEBUG if enable else logging.INFO)
+    ROOT_LOGGER.setLevel(logging.INFO if enable else logging.ERROR)
 
 
 def set_log_destination(destination):

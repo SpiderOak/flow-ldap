@@ -51,8 +51,8 @@ class HTTPServer(threading.Thread):
 
     def run(self):
         """Run this HTTP server."""
-        LOG.debug("start http local server thread")
+        LOG.info("start http local server thread")
         while self.keep_running.is_set():
             self.wsgi_server.handle_request()
         self.wsgi_server.server_close()
-        LOG.debug("stop http local server thread")
+        LOG.info("stop http local server thread")

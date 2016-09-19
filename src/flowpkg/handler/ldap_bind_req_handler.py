@@ -27,7 +27,7 @@ class LDAPBindRequestHandler(object):
         """Callback to execute for 'ldap-bind-request' notifications.
         It spawns a new thread to process each bind request.
         """
-        LOG.debug(
+        LOG.info(
             "bind request received from '%s'",
             notif_data["username"],
         )
@@ -56,7 +56,7 @@ class LDAPBindProcessor(threading.Thread):
             LOG.error("account '%s' not found", username)
             return
         if not account_entry["enabled"]:
-            LOG.debug("account '%s' is disabled, cannot bind", username)
+            LOG.info("account '%s' is disabled, cannot bind", username)
             return
         if self.notif_data["level2Secret"]:  # link to ldap request
             try:
@@ -100,7 +100,7 @@ class LDAPBindProcessor(threading.Thread):
             )
             return
         if not self.ldap_bind(username, notif_data["password"]):
-            LOG.debug("ldap_bind(%s) failed", username)
+            LOG.info("ldap_bind(%s) failed", username)
             return
         try:
             password = self.flow.link_ldap_account(
@@ -153,7 +153,7 @@ class LDAPBindProcessor(threading.Thread):
             )
             return
         if not self.ldap_bind(username, notif_data["password"]):
-            LOG.debug("ldap_bind(%s) failed", username)
+            LOG.info("ldap_bind(%s) failed", username)
             return
         self.flow.ldap_bind_response(
             username=username,

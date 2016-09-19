@@ -25,7 +25,7 @@ def run(db, flow, ldap_tid, backup_cid):
     # run db back up
     backup_filename = db.run_backup()
     try:
-        LOG.debug("uploading db")
+        LOG.info("uploading db")
         # upload backup as attachment
         aid = flow.new_attachment(
             ldap_tid,
@@ -52,7 +52,7 @@ def restore(flow, ldap_tid, backup_cid):
     msgs = flow.enumerate_messages(ldap_tid, backup_cid)
     if not msgs:
         # no backup available
-        LOG.debug("no db backup available")
+        LOG.info("no db backup available")
         return
     last_backup_msg = msgs[0]
     attachments = last_backup_msg["attachments"]

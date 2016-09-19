@@ -28,4 +28,4 @@ class UploadHandler(object):
         if notif_type == Flow.UPLOAD_ERROR_NOTIFICATION:
             LOG.error("upload failed: '%s'", notif_data["err"])
         elif notif_type == Flow.UPLOAD_COMPLETE_NOTIFICATION:
-            LOG.debug("upload completed")
+            LOG.info("upload completed")
