@@ -39,7 +39,7 @@ class Server(object):
     """Runs the server mode for this application."""
 
     def __init__(self, options=None, stop_server_event=None):
-        self.debug = options.debug
+        self.debug = getattr(options, "debug", False)
         self.config = None
         self.dma_manager = None
         self.db = None
