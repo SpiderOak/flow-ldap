@@ -129,9 +129,14 @@ def setup_server_logging():
     PLATFORM_HANDLERS.update(get_platform_handlers())
 
 
-def set_log_debug(enable=True):
+def set_log_verbose(enable=True):
     """Setups the verbose mode of the logging configuration."""
-    ROOT_LOGGER.setLevel(logging.INFO if enable else logging.ERROR)
+    ROOT_LOGGER.setLevel(logging.INFO if enable else logging.WARNING)
+
+
+def set_log_debug(debug=True):
+    """Setups the verbose mode of the logging configuration."""
+    ROOT_LOGGER.setLevel(logging.DEBUG if debug else logging.WARNING)
 
 
 def set_log_destination(destination):

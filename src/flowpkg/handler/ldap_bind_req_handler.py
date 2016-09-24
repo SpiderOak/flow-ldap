@@ -9,7 +9,6 @@ import logging
 
 from flow import Flow
 
-from src.db import local_db
 from src.flowpkg import flow_util
 
 

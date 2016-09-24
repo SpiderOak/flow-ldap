@@ -12,13 +12,11 @@ import sys
 import argparse
 import logging
 import signal
-import threading
 
 from src import utils
 from src.cli.cmd_cli import CmdCli
 from src.cli import api_gen
 from src.server import Server
-from src.log import app_log
 
 
 LOG = logging.getLogger("semaphor-ldap")

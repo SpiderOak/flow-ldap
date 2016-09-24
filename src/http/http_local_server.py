@@ -53,6 +53,9 @@ class HTTPServer(threading.Thread):
         """Run this HTTP server."""
         LOG.info("start http local server thread")
         while self.keep_running.is_set():
-            self.wsgi_server.handle_request()
+            try:
+                self.wsgi_server.handle_request()
+            except Exception as exception:
+                LOG.error("failed to handle request: '%s'", exception)
         self.wsgi_server.server_close()
         LOG.info("stop http local server thread")

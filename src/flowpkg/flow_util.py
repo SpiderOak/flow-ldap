@@ -13,7 +13,7 @@ from src import utils, app_platform
 LOG = logging.getLogger("flow_util")
 
 
-def create_flow_object(config):
+def create_flow_object(config, glue_out_filename):
     """Creates and returns the flow object using the given 'config' dict."""
     flow_config = {
         "host": config.get("flow-service-host") or
@@ -27,7 +27,7 @@ def create_flow_object(config):
         "schema_dir": config.get("schema-dir") or
         app_platform.get_default_backend_schema_path(),
         "db_dir": app_platform.get_config_path(),
-        "glue_out_filename": app_platform.get_glue_out_filename(),
+        "glue_out_filename": glue_out_filename,
         "attachment_dir": app_platform.get_default_attachment_path(),
     }
     flow_args = {
@@ -256,7 +256,8 @@ def rescan_accounts_on_team(flow, tid, accounts):
                 team_accounts.append(account_id)
             else:  # banned
                 LOG.info(
-                    "account '%s' banned from LDAP team, not auto-adding to team.",
+                    "account '%s' banned from LDAP team, "
+                    "not auto-adding to team.",
                     flow.get_peer_from_id(account_id)["username"],
                 )
         else:  # already member

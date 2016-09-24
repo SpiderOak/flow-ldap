@@ -39,6 +39,7 @@ class Server(object):
     """Runs the server mode for this application."""
 
     def __init__(self, options=None, stop_server_event=None):
+        self.debug = options.debug
         self.config = None
         self.dma_manager = None
         self.db = None
@@ -86,13 +87,19 @@ class Server(object):
     def set_verbose(self):
         """Updates the server verbose mode."""
         verbose = self.config.get("verbose") == "yes"
-        app_log.set_log_debug(verbose)
+        if self.debug:
+            app_log.set_log_debug(verbose)
+        else:
+            app_log.set_log_verbose(verbose)
 
     def init_log(self):
         """Initialize logging for the server."""
         app_log.setup_server_logging()
-        debug = self.config.get("verbose") == "yes" or False
-        app_log.set_log_debug(debug)
+        verbose = self.config.get("verbose") == "yes" or False
+        if self.debug:
+            app_log.set_log_debug(verbose)
+        else:
+            app_log.set_log_verbose(verbose)
         config_log_dest = self.config.get("log-dest")
         logging_destination = config_log_dest or \
             app_log.supported_log_destinations()[0]
