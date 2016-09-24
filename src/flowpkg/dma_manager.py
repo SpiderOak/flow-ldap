@@ -26,6 +26,8 @@ from src.flowpkg.handler import (
 from src.log.flow_log_channel_handler import FlowRemoteLogger
 
 WAIT_SLEEP_SECS = 2
+MAX_GLUE_LOG_SIZE = 512 * 1024 * 1024  # 512 MB
+CHECK_GLUE_LOG_FILE_SIZE_MINUTES = 10
 LOG = logging.getLogger("flow_manager")
 
 
@@ -46,6 +48,7 @@ class DMAManager(object):
         self.backup_cid = ""
         self.log_cid = ""
         self.test_cid = ""
+        self.glue_out_filename = ""
         self.ready = threading.Event()
         self.threads_running = False
 
@@ -72,11 +75,31 @@ class DMAManager(object):
         )
         self.set_db_backup_mins_from_config()
 
+    def check_glue_log_size(self):
+        """Check flowappglue stderr log file size.
+        If it is bigger than the limit, then clear the file.
+        """
+        try:
+            LOG.debug("checking glue log file size")
+            size = os.path.getsize(self.glue_out_filename)
+            if size > MAX_GLUE_LOG_SIZE:
+                LOG.debug("max size reached, clearing glue log file")
+                self.flow.clear_glue_log()
+        except Exception as exception:
+            LOG.error("error checking glue log file size: '%s'", exception)
+
     def init_flow(self):
         """Initialize the flow object and try to start up."""
         LOG.info("initializing the flow service")
+        self.glue_out_filename = app_platform.get_glue_out_filename()
         self.flow = flow_util.create_flow_object(
             self.config,
+            self.glue_out_filename,
+        )
+        # Register cron task to clean glue log file
+        self.cron.update_task_frequency(
+            CHECK_GLUE_LOG_FILE_SIZE_MINUTES,
+            self.check_glue_log_size,
         )
         self.start_up()
 

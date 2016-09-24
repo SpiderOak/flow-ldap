@@ -126,7 +126,10 @@ class HttpApi(object):
             ldap_state = "ERROR: %s" % str(exception)
         else:
             ldap_state = "OK"
-        sync_state = "ON" if self.server.ldap_sync_on.is_set() else "OFF"
+        sync_state = "ON" \
+            if self.server.ldap_sync_on.is_set() else "OFF"
+        if self.server.ldap_sync.lock.locked():
+            sync_state += ", running..."
         return {
             "db": db_state,
             "flow": flow_state,
