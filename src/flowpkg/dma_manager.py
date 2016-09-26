@@ -469,3 +469,13 @@ class DMAManager(object):
                 utils.URI_FINGERPRINT % {"fp": fpr},
             ),
         )
+
+    def check_flow(self):
+        """Health check for Flow. Returns a string with the result."""
+        try:
+            self.check_flow_connection()
+        except Exception as exception:
+            flow_state = "ERROR: %s" % str(exception)
+        else:
+            flow_state = "OK"
+        return flow_state

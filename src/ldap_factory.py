@@ -56,10 +56,33 @@ class LDAPFactory(object):
             self.lock.release()
         return ldap_conn
 
-    def check_connection(self):
-        """Performs a test connection to the LDAP server.
-        It raises an ldap.LDAPError exception if there
-        was an error when trying to connect.
-        """
-        ldap_conn = self.get_connection()
-        ldap_conn.close()
+    def check_ldap(self):
+        """Health check for LDAP. Returns a string with the result."""
+        ldap_state = ""
+        ldap_conn = None
+        try:
+            ldap_conn = self.get_connection()
+        except Exception as exception:
+            ldap_state = "ERROR: '%s', " \
+                "check 'uri', 'admin-user' and " \
+                "'admin-pw' LDAP variables" % (str(exception),)
+        else:
+            # Perform a get_auth_username to check
+            # base-dn and dir-auth-source/dir-auth-username
+            # config values
+            try:
+                ldap_conn.get_auth_username(
+                    self.admin_user,
+                )
+            except Exception as exception:
+                ldap_state = "ERROR: %s, " \
+                    "check 'admin-user', 'dir-auth-source', " \
+                    "'dir-auth-username' and 'base-dn' variables" % (
+                        str(exception),
+                    )
+            else:
+                ldap_state = "OK"
+        finally:
+            if ldap_conn:
+                ldap_conn.close()
+        return ldap_state

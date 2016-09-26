@@ -108,33 +108,11 @@ class HttpApi(object):
 
     def check_status(self):
         """Executes health checks and returns the server status."""
-        try:
-            self.server.db.check_connection()
-        except Exception as exception:
-            db_state = "ERROR: %s" % str(exception)
-        else:
-            db_state = "OK"
-        try:
-            self.dma_manager.check_flow_connection()
-        except Exception as exception:
-            flow_state = "ERROR: %s" % str(exception)
-        else:
-            flow_state = "OK"
-        try:
-            self.ldap_factory.check_connection()
-        except Exception as exception:
-            ldap_state = "ERROR: %s" % str(exception)
-        else:
-            ldap_state = "OK"
-        sync_state = "ON" \
-            if self.server.ldap_sync_on.is_set() else "OFF"
-        if self.server.ldap_sync.lock.locked():
-            sync_state += ", running..."
         return {
-            "db": db_state,
-            "flow": flow_state,
-            "ldap": ldap_state,
-            "sync": sync_state,
+            "db": self.server.db.check_db(),
+            "flow": self.dma_manager.check_flow(),
+            "ldap": self.ldap_factory.check_ldap(),
+            "sync": self.server.ldap_sync.check_sync(),
         }
 
     def dma_fingerprint(self):

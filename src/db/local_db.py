@@ -393,3 +393,13 @@ class LocalDB(object):
         db_conn.close()
         db_back_conn.close()
         return backup_filename
+
+    def check_db(self):
+        """Health check for DB. Returns a string with the result."""
+        try:
+            self.check_connection()
+        except Exception as exception:
+            db_state = "ERROR: %s" % str(exception)
+        else:
+            db_state = "OK"
+        return db_state

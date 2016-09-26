@@ -27,7 +27,7 @@ log-dest =
 ########################################
 # LDAP
 uri = ldap://domain.com
-base-dn = dc=domain,dc=com
+base-dn =
 admin-user = cn=admin,dc=domain,dc=com
 admin-pw = password
 group-dn = ou=People,dc=domain,dc=com
@@ -37,14 +37,15 @@ server-type = AD
 dir-member-source = member
 dir-username-source = userPrincipalName
 dir-guid-source = objectGUID
-dir-auth-source = dn
+dir-auth-source =
+dir-auth-username =
 """ % (
     utils.SERVER_CONFIG_SECTION,
 )
 LDAP_VARIABLES = set([
     "uri", "base-dn", "admin-user", "admin-pw", "group-dn",
     "server-type", "dir-member-source", "dir-username-source",
-    "dir-guid-source", "dir-auth-source",
+    "dir-guid-source", "dir-auth-source", "dir-auth-username",
 ])
 _LDAP_CONFIG_GROUP_NAME = "LDAP Config"
 _SERVER_CONFIG_GROUP_NAME = "Server Config"

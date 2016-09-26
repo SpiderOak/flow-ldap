@@ -121,3 +121,10 @@ class LDAPSync(object):
         # if they failed in the past for some reason.
         self.dma_manager.scan_accounts()
         LOG.info("done, elapsed=%.2fs", time.time() - start_sync_time)
+
+    def check_sync(self):
+        """Status check for sync. Returns a string with the result."""
+        sync_state = "ON" if self.sync_on.is_set() else "OFF"
+        if self.lock.locked():
+            sync_state += ", running..."
+        return sync_state
