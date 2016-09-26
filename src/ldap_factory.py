@@ -35,6 +35,7 @@ class LDAPFactory(object):
             "dir_username_source": self.config.get("dir-username-source"),
             "dir_guid_source": self.config.get("dir-guid-source"),
             "dir_auth_source": self.config.get("dir-auth-source"),
+            "dir_auth_username": self.config.get("dir-auth-username"),
         }
         self.lock.release()
 
