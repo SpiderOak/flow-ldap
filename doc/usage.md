@@ -9,8 +9,11 @@ the users tracked by the Semaphor-LDAP server.
 
 ### Directory Management Account (aka DMA)
 Semaphor account that manages the Semaphor integration with LDAP. The Semaphor-LDAP server runs this account.
+The DMA for a given domain is created using the `Directory Management Key` obtained in the `Setup LDAP` web process.
+### Directory Management Key (aka DMK)
+The `DMK` is a secret token used to create the `DMA` for your domain.
 ### LDAP Team
-The `LDAP Team` is the Semaphor Team configured in the LDAP setup. It is the team managed by the Directory Management Account running in the Semaphor-LDAP server. All accounts under the domain are automatically added to this team.
+The `LDAP Team` is the Semaphor Team configured in the `LDAP Setup`. It is the team managed by the Directory Management Account running in the Semaphor-LDAP server. All accounts under the domain are automatically added to this team.
 ### Admin Accounts
 Semaphor `LDAP Team` admins are considered admins of the domain by the Semaphor-LDAP. These accounts are automatically added to the LOG channel.
 ### Prescribed Channels 
@@ -84,8 +87,7 @@ The second `ldap = ERROR` means the current configuration for connecting to your
 
 -------
 
-Let's configure the LDAP values first, 
-you can see the current configuration with the 'config-list' command:
+Let's configure the LDAP values first, you can see the current configuration with the 'config-list' command:
 ```
 $ semaphor-ldap client config-list
 Getting config list...
@@ -95,9 +97,10 @@ Getting config list...
   - group-dn = ou=People,dc=domain,dc=com       # (2)
   - server-type = AD
   - uri = ldap://domain.com                     # (3)
-  - dir-auth-source = dn
   - admin-pw = ********                         # (4)
-  - base-dn = dc=domain,dc=com                  # (5)
+  - base-dn =                  
+  - dir-auth-source =
+  - dir-auth-username =
   - dir-guid-source = objectGUID
   - dir-member-source = member
 == Server Config ==
@@ -112,21 +115,34 @@ Getting config list...
 
 To configure LDAP you need to update the five config values marked above, to do that we have to use the `config-set` command
 
+-------
+
+By default, Semaphor-LDAP is not verbose, for the purpose of this configuration, we should set the `verbose` mode to `yes`:
 ```
-$ semaphor-ldap client config-set --key uri --value ldap://example.com:389
+$ semaphor-ldap client config-set --key verbose --value yes
+```
+
+-------
+
+```
+$ semaphor-ldap client config-set \
+    --key uri \
+    --value ldap://example.com:389
 Setting config 'uri'...
 
-$ semaphor-ldap client config-set --key admin-user --value Administrator@example.com
+$ semaphor-ldap client config-set \
+    --key admin-user \
+    --value Administrator@example.com
 Setting config 'admin-user'...
 
-$ semaphor-ldap client config-set --key admin-pw
+$ semaphor-ldap client config-set \
+    --key admin-pw
 Password:
 Setting config 'admin-pw'...
 
-$ semaphor-ldap client config-set --key base-dn --value dc=example,dc=com
-Setting config 'base-dn'...
-
-$ semaphor-ldap client config-set --key group-dn --value cn=MyGroup,cn=Users,dc=example,dc=com
+$ semaphor-ldap client config-set \
+    --key group-dn \
+    --value cn=MyGroup,cn=Users,dc=example,dc=com
 Setting config 'group-dn'...
 ```
 
@@ -163,7 +179,8 @@ We can now create the `Diretory Management Account` (aka `DMA`) to manage the do
 To create a `DMA` we need the `Directory Management Key` (aka `DMK`).
 You need to securely store the generated username and recovery-key.
 ```
-$ semaphor-ldap client create-account --dmk NNBTWOQMSTHOF27VTODWKZF63CLUVSS4A22QNK4WEHYQNS7BLTHQ
+$ semaphor-ldap client create-account \
+    --dmk NNBTWOQMSTHOF27VTODWKZF63CLUVSS4A22QNK4WEHYQNS7BLTHQ
 Creating Directory Management Account...
 The DMA account was created, please securely store the following credentials:
 - Username = DMAPXZJN7QKPR
@@ -245,19 +262,28 @@ Setting log destination to file...
 
 -------
 
+If you are done configuring Semaphor-LDAP, then you should turn off the `verbose` mode:
+```
+$ semaphor-ldap client config-set --key verbose --value no
+```
+
+## Restoring Directory Management Account
+
 In case your server crashes and you are not able to recover the Semaphor-LDAP config directory, you can install Semaphor-LDAP on another device using the `username` and `recovery-key`. This command will restore your local DB (and in future relases your configuration).
 ```
-$ semaphor-ldap client create-device --username DMAPXZJN7QKPR --recovery-key USKONS7UYKDFATRPFMGSUACPHAVKUFC3
+$ semaphor-ldap client create-device \
+    --username DMAPXZJN7QKPR \
+    --recovery-key USKONS7UYKDFATRPFMGSUACPHAVKUFC3
 ```
 
 ## Windows
 
-In Windows, we have two executables:
+Unlike in Unix/OSX, in Windows, Semaphor-LDAP consists of two separate executables:
 
 - `semaphor-ldap-service.exe`: This is the server executable that runs the Semaphor-LDAP server as a Windows Service.
   You can use the executable just like any Windows Service application:
   ```
-  > semaphor-ldap-service.exe {install,start,stop}
+  > semaphor-ldap-service.exe {install,start,stop,restart}
   ```
 
 - `semaphor-ldap.exe`: This is the command line client executable.
@@ -273,4 +299,18 @@ Server configuration and local DBs are located under:
   - Windows: `C:\Windows\System32\config\systemprofile\AppData\Local\semaphor-ldap\`
   - Linux: `~/.config/semaphor-ldap/`
   - Linux: `~/Library/Application Support/semaphor-ldap/`
+
+## Troubleshooting
+
+- By default, the Semaphor-LDAP server process listens on port `8080`. If that port is not available, then the server will terminate at startup. You can detect this scenario by looking at `file`/`event`/`syslog` logs. Here are the steps to change the port:
+  - Start the server, it will terminate by its own because the port `8080` is taken, but it will generate a config file `server-config.cfg` on the config directory.
+  - Change `listen-port` on `server-config.cfg` from `8080` to the desired port.
+  - Start the server again.
+
+- Add documentation that a few admins and other accounts will be domain locked after ldap setup and before dma installation
+- Add documentation that semaphor-ldap.exe must be run as administrator.
+- Add on documentation that you can do "restart", or what happens when 127.0.0.1 timeout, then restart...
+- Add documentation that banned members are not auto added to LDAP channels/team
+- Add ldap.md
+- Add troubleshoot.md
 
