@@ -10,24 +10,34 @@ the users tracked by the Semaphor-LDAP server.
 ### Directory Management Account (aka DMA)
 Semaphor account that manages the Semaphor integration with LDAP. The Semaphor-LDAP server runs this account.
 The DMA for a given domain is created using the `Directory Management Key` obtained in the `Setup LDAP` web process.
+
 ### Directory Management Key (aka DMK)
 The `DMK` is a secret token used to create the `DMA` for your domain.
+
 ### LDAP Team
 The `LDAP Team` is the Semaphor Team configured in the `LDAP Setup`. It is the team managed by the Directory Management Account running in the Semaphor-LDAP server. All accounts under the domain are automatically added to this team.
+
 ### Admin Accounts
 Semaphor `LDAP Team` admins are considered admins of the domain by the Semaphor-LDAP. These accounts are automatically added to the LOG channel.
+
 ### Prescribed Channels 
 These are channels within the LDAP Team to which accounts are automatically added to. To turn a channel into a prescribed channel, an admin must make the `DMA` an admin of such channel. Admin accounts are the only accounts allowed to add the `DMA` to a channel.
+
 ### Log Channel
 Semaphor-LDAP will send ERROR messages to the log channel. Only admins will be added to such channel.
+
 ### Excluded Accounts
 These accounts are excluded from the LDAP sync algorithm and therefore not handled by Semaphor-LDAP.
 Excluded accounts are specified as a comma-separated list in the `excluded-accounts` configuration variable.
+
 ### Semaphor Account States
 A user Semaphor account under LDAP control can be in one of three states:
-- `unlocked`: Under control of the DMA and fully operational.
-- `ldap-locked`: Account is locked with only two possible actions: join LDAP or change username. 
-- `full-locked`: Account has been locked by the DMA because it is disabled on LDAP. The account cannot operate on the flow service whatsoever.
+  - `unlocked`: Under control of the DMA and fully operational.
+  - `ldap-locked`: Account is locked with only two possible actions: join LDAP or change username. 
+  - `full-locked`: Account has been locked by the DMA because it is disabled on LDAP. The account cannot operate on the flow service whatsoever.
+
+### Banned Accounts
+Accounts banned from the `LDAP Team` are not automatically added to the team by the bot. Likewise, accounts banned from prescribed channels are not automatically added to these channels by the bot. These accounts must be re-added to team/channels manually by team/channel admins.
 
 ## Server Application
 
@@ -59,7 +69,7 @@ Basically, the steps to integrate your LDAP server with Semaphor are:
   2. Go to `Manage Team` -> `Setup LDAP`.
   3. Perform the `Setup LDAP` web process. After completing the setup you are provided with a `Directory Management Key` (aka `DMK`).
   4. Start the server in the background (we use the client to configure the server).
-  5. Configure the Semaphor-LDAP server with correct LDAP configuration to connect to your LDAP server.
+  5. Configure the Semaphor-LDAP server with correct LDAP configuration to connect to your LDAP server. See [Configuration Variables](config.md).
   6. Create the `Directory Management Account` (aka `DMA`) for your domain with the `create-account` client command using the provided `DMK`.
   7. Accept the `DMA` as member of the LDAP Team, and also make it an admin of the team.
   8. Wait for or trigger an `ldap-sync`, which will create Semaphor accounts for all LDAP accounts.
@@ -276,6 +286,10 @@ $ semaphor-ldap client create-device \
     --recovery-key USKONS7UYKDFATRPFMGSUACPHAVKUFC3
 ```
 
+## Troubleshooting
+
+See [Troubleshooting](troubleshooting.md).
+
 ## Windows
 
 Unlike in Unix/OSX, in Windows, Semaphor-LDAP consists of two separate executables:
@@ -292,25 +306,12 @@ Unlike in Unix/OSX, in Windows, Semaphor-LDAP consists of two separate executabl
   > semaphor-ldap.exe check-status
   ```
 
+IMPORTANT: Both binares must be executed with a console in Administrator mode.
+
 ## Local Configuration Directory
 
 Server configuration and local DBs are located under:
 
   - Windows: `C:\Windows\System32\config\systemprofile\AppData\Local\semaphor-ldap\`
   - Linux: `~/.config/semaphor-ldap/`
-  - Linux: `~/Library/Application Support/semaphor-ldap/`
-
-## Troubleshooting
-
-- By default, the Semaphor-LDAP server process listens on port `8080`. If that port is not available, then the server will terminate at startup. You can detect this scenario by looking at `file`/`event`/`syslog` logs. Here are the steps to change the port:
-  - Start the server, it will terminate by its own because the port `8080` is taken, but it will generate a config file `server-config.cfg` on the config directory.
-  - Change `listen-port` on `server-config.cfg` from `8080` to the desired port.
-  - Start the server again.
-
-- Add documentation that a few admins and other accounts will be domain locked after ldap setup and before dma installation
-- Add documentation that semaphor-ldap.exe must be run as administrator.
-- Add on documentation that you can do "restart", or what happens when 127.0.0.1 timeout, then restart...
-- Add documentation that banned members are not auto added to LDAP channels/team
-- Add ldap.md
-- Add troubleshoot.md
-
+  - OSX: `~/Library/Application Support/semaphor-ldap/`
