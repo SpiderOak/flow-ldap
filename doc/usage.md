@@ -66,14 +66,16 @@ $ semaphor-ldap client --help
 
 Basically, the steps to integrate your LDAP server with Semaphor are:
   1. Create a Team on Semaphor.
-  2. Go to `Manage Team` -> `Setup LDAP`.
-  3. Perform the `Setup LDAP` web process. After completing the setup you are provided with a `Directory Management Key` (aka `DMK`).
-  4. Start the server in the background (we use the client to configure the server).
-  5. Configure the Semaphor-LDAP server with correct LDAP configuration to connect to your LDAP server. See [Configuration Variables](config.md).
-  6. Create the `Directory Management Account` (aka `DMA`) for your domain with the `create-account` client command using the provided `DMK`.
-  7. Accept the `DMA` as member of the LDAP Team, and also make it an admin of the team.
-  8. Wait for or trigger an `ldap-sync`, which will create Semaphor accounts for all LDAP accounts.
-  9. Leave the Semaphor-LDAP server running in the background, it will perform the following operations:
+  2. Upgrade the Team to `Professional`.
+  3. Go to `Manage Team` -> `Claim Domains`. You are redirected to SpiderOak web.
+  4. On the web, click on `Domains` -> `Manage` and perform the `Domain Claiming` web process.
+  5. Once the domain is claimed you need to contact SpiderOak CS, and they will provide you the `Directory Management Key` (`DMK`).
+  6. Start the Semaphor-LDAP server in the background (we use the client to configure the server).
+  7. Configure the Semaphor-LDAP server with correct LDAP configuration to connect to your LDAP server. See [Configuration Variables](config.md).
+  8. Create the `Directory Management Account` (aka `DMA`) for your domain with the `create-account` client command using the provided `DMK`.
+  9. Accept the `DMA` as member of the LDAP Team, and also make it an admin of the team.
+  10. Wait for or trigger an `ldap-sync`, which will create Semaphor accounts for all LDAP accounts.
+  11. Leave the Semaphor-LDAP server running in the background, it will perform the following operations:
     - Allow the creation of devices using LDAP credentials.
     - Join existing Semaphor accounts in the domain to LDAP.
     - Lock/Unlock Semaphor accounts by looking at the LDAP enabled state.
