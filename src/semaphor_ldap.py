@@ -88,7 +88,6 @@ def run_server(options, stop_server_event=None):
         server_obj.run()
     except Exception as exception:
         LOG.error("server execution failed with '%s'", exception)
-        raise  # TODO: remove
     finally:  # Also catches SystemExit
         if server_obj:
             server_obj.cleanup()
