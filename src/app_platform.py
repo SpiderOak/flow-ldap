@@ -34,7 +34,7 @@ _DEFAULT_APP_LINUX_RPM_PATH = \
     "/opt/semaphor-ldap-linux-x64/resources/app"
 _DEFAULT_APP_LINUX_DEB_PATH = \
     "/usr/share/semaphor-ldap/resources/app"
-_DEFAULT_APP_WINDOWS_PATH = r"semaphor-ldap\resources\app"
+_DEFAULT_APP_WINDOWS_PATH = r"resources\app"
 
 _DEFAULT_CONFIG_DIR = "semaphor-ldap"
 _DEFAULT_ATTACHMENT_DIR = "downloads"
@@ -64,9 +64,12 @@ def _linux_app_path():
 
 
 def _windows_app_path():
-    """Returns the default application directory for Windows."""
-    return os.path.join(os.environ["ProgramFiles"],
-                        _DEFAULT_APP_WINDOWS_PATH)
+    """Returns the default application directory for Windows.
+    On Windows, the resources dir is installed on the same directory
+    as the executables.
+    """
+    executable_dir = os.path.dirname(sys.executable)
+    return os.path.join(executable_dir, _DEFAULT_APP_WINDOWS_PATH)
 
 
 _APP_OS_PATH_MAP = {

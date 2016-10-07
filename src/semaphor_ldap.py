@@ -6,7 +6,6 @@ semaphor_ldap.py
 semaphor-ldap application main script.
 """
 
-from __future__ import print_function
 import os
 import sys
 import argparse
