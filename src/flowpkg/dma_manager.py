@@ -430,13 +430,13 @@ class DMAManager(object):
         LOG.info("setting dma profile")
         profile_img_filename = os.path.join(
             app_platform.get_default_img_path(),
-            "bot.jpg",
+            "bot.png",
         )
         image_data = None
         if os.path.isfile(profile_img_filename):
             with open(profile_img_filename, "rb") as image_file:
                 image_raw_data = image_file.read()
-            image_data = "data:image/jpeg;base64,%s" % (
+            image_data = "data:image/png;base64,%s" % (
                 base64.b64encode(image_raw_data),
             )
         content = self.flow.get_profile_item_json(

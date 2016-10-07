@@ -100,7 +100,7 @@ class CreateAccount(CmdMethod):
         print("The DMA account was created, "
               "please securely store the following credentials:\n"
               "- Username = %s\n- Recovery Key = %s\n"
-              "A Team Join Request was sent to the LDAP Team = %s.\n"
+              "A Team Join Request was sent to the LDAP Team = %s\n"
               "To finish the setup please accept the "
               "request and make the DMA an admin." % (
                   result_dict["username"],

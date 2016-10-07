@@ -48,39 +48,36 @@ class LDAPBindProcessor(threading.Thread):
         self.notif_data = notif_data
 
     def run(self):
+        """Thread bind execution."""
+        try:
+            self.run_bind()
+        except Exception as exception:
+            LOG.error(
+                "bind error on '%s': '%s'",
+                self.notif_data["username"],
+                exception,
+            )
+
+    def run_bind(self):
         """It executes the actual bind request."""
         username = self.notif_data["username"]
         account_entry = self.db.get_account(username)
         if not account_entry:
-            LOG.error("account '%s' not found", username)
+            LOG.info("account '%s' not found", username)
             return
         if not account_entry["enabled"]:
             LOG.info("account '%s' is disabled, cannot bind", username)
             return
         if self.notif_data["level2Secret"]:  # link to ldap request
-            try:
-                self.process_link_request(
-                    self.notif_data,
-                    account_entry,
-                )
-            except Exception as exception:
-                LOG.error(
-                    "account '%s' link failed: '%s'",
-                    username,
-                    exception,
-                )
+            self.process_link_request(
+                self.notif_data,
+                account_entry,
+            )
         else:  # device creation request
-            try:
-                self.process_create_ldap_device_request(
-                    self.notif_data,
-                    account_entry,
-                )
-            except Exception as exception:
-                LOG.error(
-                    "account '%s' device creation failed: '%s'",
-                    username,
-                    exception,
-                )
+            self.process_create_ldap_device_request(
+                self.notif_data,
+                account_entry,
+            )
 
     def process_link_request(self, notif_data, account_entry):
         """It executes the link request, which involves:
@@ -93,7 +90,7 @@ class LDAPBindProcessor(threading.Thread):
         """
         username = notif_data["username"]
         if account_entry["lock_state"] != Flow.LDAP_LOCK:
-            LOG.error(
+            LOG.info(
                 "cannot link non-ldap-locked account '%s'",
                 username,
             )
@@ -101,19 +98,11 @@ class LDAPBindProcessor(threading.Thread):
         if not self.ldap_bind(username, notif_data["password"]):
             LOG.info("ldap_bind(%s) failed", username)
             return
-        try:
-            password = self.flow.link_ldap_account(
-                username=username,
-                secure_exchange_token=notif_data["secureExchangeToken"],
-                level2_secret=notif_data["level2Secret"],
-            )
-        except Flow.FlowError as flow_err:
-            LOG.error(
-                "link_ldap_account(%s) failed: %s",
-                username,
-                flow_err,
-            )
-            return
+        password = self.flow.link_ldap_account(
+            username=username,
+            secure_exchange_token=notif_data["secureExchangeToken"],
+            level2_secret=notif_data["level2Secret"],
+        )
         # Account is in control of the bot now, update data
         semaphor_data = {
             "id": self.flow.get_peer(username)["accountId"],
@@ -145,7 +134,7 @@ class LDAPBindProcessor(threading.Thread):
         """
         username = notif_data["username"]
         if account_entry["lock_state"] != Flow.UNLOCK:
-            LOG.error(
+            LOG.info(
                 "cannot allow device creation "
                 "to non-ldaped account '%s'",
                 username,
