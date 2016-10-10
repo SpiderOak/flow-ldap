@@ -1,6 +1,6 @@
 # Semaphor-LDAP Usage Guide
 
-Semaphor-LDAP consists of a server application and a command line client.
+Semaphor-LDAP consists of a service/server application and a command line client.
 The server is intended to run as a daemon in Unix and as a service in Windows.
 The command line client provides commands to configure the server and retrieve information about
 the users tracked by the Semaphor-LDAP server.
@@ -39,18 +39,12 @@ A user Semaphor account under LDAP control can be in one of three states:
 ### Banned Accounts
 Accounts banned from the `LDAP Team` are not automatically added to the team by the bot. Likewise, accounts banned from prescribed channels are not automatically added to these channels by the bot. These accounts must be re-added to team/channels manually by team/channel admins.
 
-## Server Application
+## Server/Service Application
 
-The performs the following main operations:
+The service performs the following main operations:
  - LDAP account polling (via LDAP Group/OU listing).
  - Semaphor domain account management.
  - Provide an HTTP JSON-RPC API.
-
-The following command starts the Semaphor-LDAP server.
-It will generate its own default config and an auto-connect config for the command line client
-```
-$ semaphor-ldap server
-```
 
 ## Command Line Client Application
 
@@ -59,7 +53,7 @@ Currently, both the client and the server must run in the same host.
 
 Use the `--help` option to get a list of the available client commands:
 ```
-$ semaphor-ldap client --help
+> semaphor-ldap.exe --help
 ```
 
 ## Semaphor-LDAP Server Configuration Steps
@@ -70,12 +64,12 @@ Basically, the steps to integrate your LDAP server with Semaphor are:
   3. Go to `Manage Team` -> `Claim Domains`. You are redirected to SpiderOak web.
   4. On the web, click on `Domains` -> `Manage` and perform the `Domain Claiming` web process.
   5. Once the domain is claimed you need to contact SpiderOak CS, and they will provide you the `Directory Management Key` (`DMK`).
-  6. Start the Semaphor-LDAP server in the background (we use the client to configure the server).
-  7. Configure the Semaphor-LDAP server with correct LDAP configuration to connect to your LDAP server. See [Configuration Variables](config.md).
+  6. Install Semaphor-LDAP. This will automatically register and start the service. The service binary `semaphor-ldap-service.exe`, and the client binary `semaphor-ldap.exe` will be installed (by default) on `C:\Program Files\Semaphor-LDAP x64\`.
+  7. Using the command line client application, `semaphor-ldap.exe`, configure the Semaphor-LDAP service with correct LDAP configuration to connect to your LDAP server. See [Configuration Variables](config.md).
   8. Create the `Directory Management Account` (aka `DMA`) for your domain with the `create-account` client command using the provided `DMK`.
   9. Accept the `DMA` as member of the LDAP Team, and also make it an admin of the team.
   10. Wait for or trigger an `ldap-sync`, which will create Semaphor accounts for all LDAP accounts.
-  11. Leave the Semaphor-LDAP server running in the background, it will perform the following operations:
+  11. Leave the Semaphor-LDAP service running in the background, it will perform the following operations:
     - Allow the creation of devices using LDAP credentials.
     - Join existing Semaphor accounts in the domain to LDAP.
     - Lock/Unlock Semaphor accounts by looking at the LDAP enabled state.
@@ -83,10 +77,13 @@ Basically, the steps to integrate your LDAP server with Semaphor are:
 
 ### Step by Step Guide
 
+The command line client application, `semaphor-ldap.exe`, must be executed in a console in Administrator mode.
+
 Once the server is running we can check its current state via the `check-status` command.
 On the first run you will probably see the following output:
 ```
-$ semaphor-ldap client check-status
+> cd C:\Program Files\Semaphor-LDAP x64\
+> semaphor-ldap.exe check-status
 Checking Semaphor-LDAP server status...
 Server status:
 - db = OK
@@ -94,14 +91,15 @@ Server status:
 - ldap = ERROR: {'desc': "Can't contact LDAP server"}
 - sync = OFF
 ```
-The first `flow = ERROR` means you haven't configured your Directory Management Account.
-The second `ldap = ERROR` means the current configuration for connecting to your LDAP server is invalid. 
+- The first `flow = ERROR` means you haven't configured your Directory Management Account.
+- The second `ldap = ERROR` means the current configuration for connecting to your LDAP server is invalid. 
+- `sync = OFF` means the ldap-sync scheduled run is off.
 
 -------
 
 Let's configure the LDAP values first, you can see the current configuration with the 'config-list' command:
 ```
-$ semaphor-ldap client config-list
+> semaphor-ldap.exe config-list
 Getting config list...
 == LDAP Config ==
   - admin-user = cn=admin,dc=domain,dc=com      # (1)
@@ -131,37 +129,30 @@ To configure LDAP you need to update the five config values marked above, to do 
 
 By default, Semaphor-LDAP is not verbose, for the purpose of this configuration, we should set the `verbose` mode to `yes`:
 ```
-$ semaphor-ldap client config-set --key verbose --value yes
+> semaphor-ldap.exe config-set --key verbose --value yes
 ```
 
 -------
 
 ```
-$ semaphor-ldap client config-set \
-    --key uri \
-    --value ldap://example.com:389
+> semaphor-ldap.exe config-set --key uri --value ldap://example.com:389
 Setting config 'uri'...
 
-$ semaphor-ldap client config-set \
-    --key admin-user \
-    --value Administrator@example.com
+> semaphor-ldap.exe config-set --key admin-user --value Administrator@example.com
 Setting config 'admin-user'...
 
-$ semaphor-ldap client config-set \
-    --key admin-pw
+> semaphor-ldap.exe config-set --key admin-pw
 Password:
 Setting config 'admin-pw'...
 
-$ semaphor-ldap client config-set \
-    --key group-dn \
-    --value cn=MyGroup,cn=Users,dc=example,dc=com
+> semaphor-ldap.exe config-set --key group-dn --value cn=MyGroup,cn=Users,dc=example,dc=com
 Setting config 'group-dn'...
 ```
 
 Now we should see an "OK" on the ldap status:
 
 ```
-$ semaphor-ldap client check-status
+> semaphor-ldap.exe check-status
 Checking Semaphor-LDAP server status...
 Server status:
 - db = OK
@@ -176,7 +167,7 @@ Before continuing with flow, we should list the users that will be controlled by
 This option will list the users that belong to the group specified in the `group-dn` config variable.
 
 ```
-$ semaphor-ldap client group-userlist
+> semaphor-ldap.exe group-userlist
 Getting list of accounts from the configured LDAP group...
 john@example.com, uid = fc6dd73a-ebe5-4ac2-8a54-b6fe89638e8f, ldap-state = enabled
 alice@example.com, uid = dea2c6b5-6123-4e18-be5b-92b33506c3a5, ldap-state = enabled
@@ -189,10 +180,10 @@ If everything looks good, we can continue with the flow setup.
 
 We can now create the `Diretory Management Account` (aka `DMA`) to manage the domain.
 To create a `DMA` we need the `Directory Management Key` (aka `DMK`).
-You need to securely store the generated username and recovery-key.
+
+IMPORTANT: You must securely store the generated username and recovery-key.
 ```
-$ semaphor-ldap client create-account \
-    --dmk NNBTWOQMSTHOF27VTODWKZF63CLUVSS4A22QNK4WEHYQNS7BLTHQ
+> semaphor-ldap.exe create-account --dmk NNBTWOQMSTHOF27VTODWKZF63CLUVSS4A22QNK4WEHYQNS7BLTHQ
 Creating Directory Management Account...
 The DMA account was created, please securely store the following credentials:
 - Username = DMAPXZJN7QKPR
@@ -207,7 +198,7 @@ To finish the setup please accept the request and make the DMA an admin.
 Now you need to go to Semaphor and accept the `DMA` Team Join Request to the LDAP Team and also make it an admin of the Team.
 After all this, we should see an "OK" on the flow status
 ```
-$ semaphor-ldap client check-status
+> semaphor-ldap.exe check-status
 Checking Semaphor-LDAP server status...
 Server status:
 - db = OK
@@ -223,8 +214,8 @@ The `LDAP sync` will run every `ldap-sync-minutes` minutes.
 It creates Semaphor accounts for the accounts listed in the given LDAP group.
 The LDAP sync will also lock/unlock Semaphor accounts by looking at the LDAP state.
 ```
-$ semaphor-ldap client ldap-sync-enable
-$ semaphor-ldap client check-status
+> semaphor-ldap.exe ldap-sync-enable
+> semaphor-ldap.exe check-status
 Checking Semaphor-LDAP server status...
 Server status:
 - db = OK
@@ -238,16 +229,28 @@ With `sync = ON` we can now proceed to trigger a manual `ldap-sync`
 
 We could wait for the first scheduled `LDAP sync` run, but we can also trigger one manually:
 ```
-$ semaphor-ldap client ldap-sync-trigger
+> semaphor-ldap.exe ldap-sync-trigger
 Trigerring an LDAP sync...
+# When the ldap-sync is running, then the check-status command will show a 'OK, running...' in 'sync':
+> semaphor-ldap.exe check-status
+Checking Semaphor-LDAP server status...
+Server status:
+- db = OK
+- flow = OK
+- ldap = OK
+- sync = ON, running...
 ```
+The `ldap-sync` process may take a while (from minutes to hours), depending on the number of LDAP accounts members of the configured `group-dn`.
+
+Before continuing, you should wait for the `ldap-sync` process to finish, that is: `sync` to be `OK` (without the `, running...` part).
+After the `ldap-sync` finishes, all pre-existing Semaphor accounts on the domain will be locked and given the choice of joining LDAP or changing their username.
 
 Accounts should be ready after the LDAP sync, we can check their state by using the `db-userlist` command. 
   - `unlocked` are Semaphor accounts owned by Semaphor-LDAP.
-  - `ldap-locked` are Semaphor accounts that are locked and given the choice between join to LDAP or change username
+  - `ldap-locked` are Semaphor accounts that are locked and given the choice between join to LDAP or change username.
   - `full-locked` are Semaphor accounts that cannot operate, they correspond to a `disabled` LDAP state.
 ```
-$ semaphor-ldap client db-userlist
+> semaphor-ldap.exe db-userlist
 Retrieving users from the local database...
 john@example.com, uid = fc6dd73a-ebe5-4ac2-8a54-b6fe89638e8f, ldap-state = disabled, semaphor-guid = 73M5UDSR263J7F3RQJO4NIISN3WL4LXJU3YC6JNHM7VLFYFNJ63A, semaphor-lock-state = unlocked
 alice@example.com, uid = dea2c6b5-6123-4e18-be5b-92b33506c3a5, ldap-state = enabled, semaphor-guid = 46YIUGBAWFNOWRA53E6UXTJH5EQ5FIP3ONDGEQZCTTBH7UK6QMEA, semaphor-lock-state = ldap-locked
@@ -256,36 +259,44 @@ alice@example.com, uid = dea2c6b5-6123-4e18-be5b-92b33506c3a5, ldap-state = enab
 
 -------
 
-With accounts created and the Semaphor-LDAP server up and running, we can retrieve the Semaphor Join LDAP URI and share it to employees so they can start using Enterprise Semaphor.
+With the first `ldap-sync` finished and the Semaphor-LDAP service up and running, we must retrieve the Semaphor Join LDAP URI and share it to employees so they can start using Enterprise Semaphor.
 ```
-$ semaphor-ldap client dma-fingerprint
+> semaphor-ldap.exe dma-fingerprint
 Getting Directory Management Account fingerprint...
 Fingerprint = LAA75OEDLBUV4H6IKNFJW5GBOGEBLPXA5MKLLXL7XJE6WQM5SXJA
 URI = semaphor://enterprise-sign-in/LAA75OEDLBUV4H6IKNFJW5GBOGEBLPXA5MKLLXL7XJE6WQM5SXJA
 ```
+With the provided URI/fingerprint, they will be able to start using Semaphor using their LDAP credentials.
 
 -------
 
 You can redirect server logging to one of `event` (on Windows), `syslog` (on Linux) and `file` by using the `log-dest` command:
 ```
-$ semaphor-ldap client log-dest --target event
+> semaphor-ldap.exe log-dest --target event
 Setting log destination to file...
 ```
+By default, on Windows, Semaphor-LDAP logs to the `Event Log` (`event`).
 
 -------
 
 If you are done configuring Semaphor-LDAP, then you should turn off the `verbose` mode:
 ```
-$ semaphor-ldap client config-set --key verbose --value no
+> semaphor-ldap.exe config-set --key verbose --value no
 ```
+
+-------
+
+If you want to stop the semaphor-ldap service, use the `semaphor-ldap-service.exe` executable:
+```
+> semaphor-ldap-service.exe stop
+```
+And, as with any Windows service, you can also {start,restart,remove,install} the service.
 
 ## Restoring Directory Management Account
 
 In case your server crashes and you are not able to recover the Semaphor-LDAP config directory, you can install Semaphor-LDAP on another device using the `username` and `recovery-key`. This command will restore your local DB (and in future relases your configuration).
 ```
-$ semaphor-ldap client create-device \
-    --username DMAPXZJN7QKPR \
-    --recovery-key USKONS7UYKDFATRPFMGSUACPHAVKUFC3
+> semaphor-ldap.exe create-device --username DMAPXZJN7QKPR --recovery-key USKONS7UYKDFATRPFMGSUACPHAVKUFC3
 ```
 
 ## Troubleshooting
