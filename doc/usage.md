@@ -63,8 +63,8 @@ Basically, the steps to integrate your LDAP server with Semaphor are:
   2. Upgrade the Team to `Professional`.
   3. Go to `Manage Team` -> `Claim Domains`. You are redirected to SpiderOak web.
   4. On the web, click on `Domains` -> `Manage` and perform the `Domain Claiming` web process.
-  5. Once the domain is claimed you need to contact SpiderOak CS, and they will provide you the `Directory Management Key` (`DMK`).
-  6. Install Semaphor-LDAP. This will automatically register and start the service. The service binary `semaphor-ldap-service.exe`, and the client binary `semaphor-ldap.exe` will be installed (by default) on `C:\Program Files\Semaphor-LDAP x64\`.
+  5. Once a domain claim is validated for your team, go to `Directory Management` -> `Add Key`. A `Directory Management Key` (aka `DMK`) will be provided.
+  6. Install Semaphor-LDAP on your server. The installer will automatically register and start the Windows Service. The service binary `semaphor-ldap-service.exe`, and the client binary `semaphor-ldap.exe` will be installed (by default) on `C:\Program Files\Semaphor-LDAP x64\`.
   7. Using the command line client application, `semaphor-ldap.exe`, configure the Semaphor-LDAP service with correct LDAP configuration to connect to your LDAP server. See [Configuration Variables](config.md).
   8. Create the `Directory Management Account` (aka `DMA`) for your domain with the `create-account` client command using the provided `DMK`.
   9. Accept the `DMA` as member of the LDAP Team, and also make it an admin of the team.
