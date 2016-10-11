@@ -32,11 +32,11 @@ The Semaphor-LDAP service connects and retrieves accounts from an LDAP server. Y
 ### uri
 LDAP Server URI. e.g. `ldap://example.com:389/`
 
-### admin-user
-The Semaphor-LDAP service needs an LDAP administrator user, e.g. `Administrator@example.com`.
+### ldap-user
+The Semaphor-LDAP service needs an LDAP username, e.g. `user@example.com`. The used `ldap-user` needs enough permissions to list members of the given LDAP group given in `group-dn`.
 
-### admin-pw
-The Semaphor-LDAP service needs the administrator password also.
+### ldap-pw
+The Semaphor-LDAP service also needs the `ldap-user` password.
 
 ### group-dn
 LDAP Group with all the accounts for which a Semaphor account will be created, e.g. `cn=MyGroup,cn=Users,dc=domain,dc=com`. Support for multiple groups is coming on later versions. If you want the Semaphor-LDAP service to handle multiple LDAP groups, then you should create one group that contains all these groups (the Semaphor-LDAP service supports nested groups).

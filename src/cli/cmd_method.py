@@ -122,7 +122,7 @@ class ConfigSet(CmdMethod):
     def request(self, args_dict):
         if "value" not in args_dict or not args_dict["value"]:
             # Prompt variable
-            if args_dict.get("key") == "admin-pw":
+            if args_dict.get("key") == "ldap-pw":
                 args_dict["value"] = getpass.getpass("Password: ")
             else:
                 args_dict["value"] = raw_input("Value: ")
@@ -140,7 +140,7 @@ class ConfigList(CmdMethod):
         for group, variables in result_dict.items():
             print("== %s ==" % group)
             for key, value in variables.items():
-                if key == "admin-pw":
+                if key == "ldap-pw":
                     value = "*" * len(value)
                 print("  - %s = %s" % (key, value))
 

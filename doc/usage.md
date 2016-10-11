@@ -102,12 +102,12 @@ Let's configure the LDAP values first, you can see the current configuration wit
 > semaphor-ldap.exe config-list
 Getting config list...
 == LDAP Config ==
-  - admin-user = cn=admin,dc=domain,dc=com      # (1)
+  - ldap-user = cn=user,dc=domain,dc=com        # (1)
   - dir-username-source = userPrincipalName
   - group-dn = ou=People,dc=domain,dc=com       # (2)
   - server-type = AD
   - uri = ldap://domain.com                     # (3)
-  - admin-pw = ********                         # (4)
+  - ldap-pw = ********                          # (4)
   - base-dn =                  
   - dir-auth-source =
   - dir-auth-username =
@@ -138,12 +138,12 @@ By default, Semaphor-LDAP is not verbose, for the purpose of this configuration,
 > semaphor-ldap.exe config-set --key uri --value ldap://example.com:389
 Setting config 'uri'...
 
-> semaphor-ldap.exe config-set --key admin-user --value Administrator@example.com
-Setting config 'admin-user'...
+> semaphor-ldap.exe config-set --key ldap-user --value user@example.com
+Setting config 'ldap-user'...
 
-> semaphor-ldap.exe config-set --key admin-pw
+> semaphor-ldap.exe config-set --key ldap-pw
 Password:
-Setting config 'admin-pw'...
+Setting config 'ldap-pw'...
 
 > semaphor-ldap.exe config-set --key group-dn --value cn=MyGroup,cn=Users,dc=example,dc=com
 Setting config 'group-dn'...

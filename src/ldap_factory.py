@@ -27,8 +27,8 @@ class LDAPFactory(object):
         self.lock.acquire()
         self.uri = self.config.get("uri")
         self.base_dn = self.config.get("base-dn")
-        self.admin_user = self.config.get("admin-user")
-        self.admin_pw = self.config.get("admin-pw")
+        self.ldap_user = self.config.get("ldap-user")
+        self.ldap_pw = self.config.get("ldap-pw")
         self.ldap_vendor_map = {
             "server_type": self.config.get("server-type"),
             "dir_member_source": self.config.get("dir-member-source"),
@@ -48,8 +48,8 @@ class LDAPFactory(object):
             ldap_conn = ldap_reader.LdapConnection(
                 self.uri,
                 self.base_dn,
-                self.admin_user,
-                self.admin_pw,
+                self.ldap_user,
+                self.ldap_pw,
                 self.ldap_vendor_map,
                 timeout=timeout,
             )
@@ -65,19 +65,19 @@ class LDAPFactory(object):
             ldap_conn = self.get_connection()
         except Exception as exception:
             ldap_state = "ERROR: '%s', " \
-                "check 'uri', 'admin-user' and " \
-                "'admin-pw' LDAP variables" % (str(exception),)
+                "check 'uri', 'ldap-user' and " \
+                "'ldap-pw' LDAP variables" % (str(exception),)
         else:
             # Perform a get_auth_username to check
             # base-dn and dir-auth-source/dir-auth-username
             # config values
             try:
                 ldap_conn.get_auth_username(
-                    self.admin_user,
+                    self.ldap_user,
                 )
             except Exception as exception:
                 ldap_state = "ERROR: %s, " \
-                    "check 'admin-user', 'dir-auth-source', " \
+                    "check 'ldap-user', 'dir-auth-source', " \
                     "'dir-auth-username' and 'base-dn' variables" % (
                         str(exception),
                     )
