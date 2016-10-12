@@ -6,28 +6,68 @@ semaphor_ldap.py
 semaphor-ldap application main script.
 """
 
-from __future__ import print_function
 import os
 import sys
 import argparse
 import logging
 import signal
 
-import common
-from cli import Cli
-from server import Server
-import app_log
-import api_gen
+from src import utils
+from src.cli.cmd_cli import CmdCli
+from src.cli import api_gen
+from src.server import Server
 
 
 LOG = logging.getLogger("semaphor-ldap")
 
 
 def run_cli(options):
-    """Run the Cli object."""
-    cli = Cli(options)
-    # For now let's throw Cli.run() to stdout
-    print("%s" % cli.run())
+    """Run the CmdCli object."""
+    cli_obj = CmdCli(options)
+    cli_obj.run()
+
+
+def add_cli_options(parser):
+    """Adds the cli options to the given parser."""
+    # Add API methods
+    cli_subparsers = parser.add_subparsers(
+        title="Commands", metavar="{API COMMAND FROM THE LIST}")
+    api_gen.add_api_methods(cli_subparsers)
+
+
+def create_generic_arg_parser():
+    """Creates the arg parser for the semaphor-ldap application."""
+    parser = argparse.ArgumentParser(
+        description="%s is a server/cli app to enable the use of "
+                    "Semaphor with Customer LDAP credentials." % (
+                        os.path.basename(sys.argv[0])
+                    ),
+    )
+    parser.add_argument(
+        "--version",
+        action="version",
+        version=utils.VERSION,
+    )
+    # Generic config
+    parser.add_argument(
+        "--debug",
+        action="store_true",
+        help="Debug Mode",
+        default=False,
+    )
+    return parser
+
+
+def run_cli_as_default():
+    """Run the CmdCli object, to be used in windows
+    so we don't have to use the client prefix every time
+    we use the client mode.
+    """
+    parser = create_generic_arg_parser()
+    add_cli_options(parser)
+    options = parser.parse_args(sys.argv[1:])
+    cli_obj = CmdCli(options)
+    cli_obj.run()
 
 
 def signal_handler(sig, frame):
@@ -35,35 +75,26 @@ def signal_handler(sig, frame):
     sys.exit will raise SystemExit that
     should be dealt with.
     """
+    LOG.info("termination signal received")
     sys.exit(0)
 
-signal.signal(signal.SIGINT, signal_handler)
-signal.signal(signal.SIGTERM, signal_handler)
 
-
-def run_server(options):
+def run_server(options, stop_server_event=None):
     """Run the Server object."""
-    server = Server(options)
+    server_obj = None
     try:
-        server.run()
+        server_obj = Server(options, stop_server_event)
+        server_obj.run()
+    except Exception as exception:
+        LOG.error("server execution failed with '%s'", exception)
     finally:  # Also catches SystemExit
-        server.cleanup()
+        if server_obj:
+            server_obj.cleanup()
 
 
-def parse_options(argv):
+def parse_options():
     """Command line options parsing."""
-
-    parser = argparse.ArgumentParser(
-        description="semaphor-ldap is a daemon/cli to enable the use of "
-                    "Semaphor with Customer LDAP credentials.")
-    parser.add_argument("--version", action="version", version=common.VERSION)
-
-    # Generic config
-    parser.add_argument(
-        "--debug",
-        action="store_true",
-        help="Debug Mode",
-        default=False)
+    parser = create_generic_arg_parser()
 
     subparsers = parser.add_subparsers(title="Modes")
 
@@ -73,35 +104,25 @@ def parse_options(argv):
     server_parser.add_argument(
         "--config",
         metavar="CONFIG",
-        help="Config cfg file with LDAP and Semaphor settings")
-    server_parser.add_argument(
-        "--log-dest",
-        metavar="DEST",
-        help="Application logging destination {syslog,event,file,null}",
-        default=app_log.default_log_destination()[0])
+        help="Config cfg file with LDAP and Semaphor settings",
+    )
 
     # CLI config
     cli_parser = subparsers.add_parser("client", help="Client Mode")
     cli_parser.set_defaults(server_mode=False)
 
-    # Add API methods
-    cli_subparsers = cli_parser.add_subparsers(title="Commands")
-    api_gen.add_api_methods(cli_subparsers)
+    # Add client API methods
+    add_cli_options(cli_parser)
 
-    options = parser.parse_args(argv[1:])
-
-    if options.server_mode and \
-            options.log_dest not in app_log.default_log_destination():
-        print("Logging destination '%s' not supported on this platform."
-              % options.log_dest)
-        sys.exit(os.EX_USAGE)
-
+    options = parser.parse_args(sys.argv[1:])
     return options
 
 
 def main():
     """Entry point for the application."""
-    options = parse_options(sys.argv)
+    signal.signal(signal.SIGINT, signal_handler)
+    signal.signal(signal.SIGTERM, signal_handler)
+    options = parse_options()
     if options.server_mode:
         run_server(options)
     else:  # CLI mode
@@ -109,4 +130,7 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    if sys.platform == "win32":
+        run_cli_as_default()
+    else:
+        main()

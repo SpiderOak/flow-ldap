@@ -11,9 +11,7 @@ import logging
 
 class ConsoleHandler(logging.StreamHandler):
     """A handler that logs to console in the sensible way.
-
     StreamHandler can log to *one of* sys.stdout or sys.stderr.
-
     It is more sensible to log to sys.stdout by default with only error
     (logging.ERROR and above) messages going to sys.stderr. This is how
     ConsoleHandler behaves.

@@ -1,0 +1,32 @@
+#! /bin/bash
+# Script to run static analysis checks on the python sources
+# usage to check files: 
+# ./check
+# usage to format files:
+# ./check --format
+
+command_exists () {
+    type "$1" &>/dev/null ;
+}
+
+execute() {
+    if command_exists $1 ; then
+            echo "Executing $1..."
+            $1 ./src
+    else
+        echo "Skipping $1, not installed."
+    fi
+}
+
+if [ "$1" == "--format" ] ; then
+    if command_exists autopep8 ; then
+        find . -path ./build -prune -o -name "*.py" -exec autopep8 -va --in-place --max-line-length 79 {} \;
+    else
+        echo "Skipping autopep8, not installed."
+    fi
+else
+    execute vulture
+    execute pyflakes
+    execute pep8
+    execute pylint
+fi
