@@ -29,24 +29,3 @@ $ python setup.py install  # This will also install dependencies
 # Test installation 
 $ semaphor-ldap --help
 ```
-
-# Windows Install
-
-For Windows we provide a separate setup to generate the semaphor-ldap server as a Windows Service.
-We use py2exe to generate the executable from the Python code.
-```
-#
-# TODO: prior steps to install dependencies on Windows
-#
-
-# Generate command line client executable
-> python setup.py py2exe
-# Test the executable
-> dist\semaphor-ldap.exe --help
-
-# Generate Windows Service executable
-> python windows_service\setup.py py2exe
-# Test executable
-> dist\semaphor-ldap-service.exe install
-> dist\semaphor-ldap-service.exe start
-```
