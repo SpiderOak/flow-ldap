@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.org/SpiderOak/flow-ldap.svg?branch=master)](https://travis-ci.org/SpiderOak/flow-ldap)
+
 # semaphor-ldap
 
 `semaphor-ldap` is a server+client app to enable the use of SpiderOak Semaphor with customer LDAP credentials.
