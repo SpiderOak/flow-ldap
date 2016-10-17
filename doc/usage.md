@@ -60,7 +60,7 @@ Use the `--help` option to get a list of the available client commands:
 
 Basically, the steps to integrate your LDAP server with Semaphor are:
   1. Create a Team on Semaphor.
-  2. Upgrade the Team to `Professional`.
+  2. Upgrade the Team to `Enterprise Team`.
   3. Go to `Manage Team` -> `Claim Domains`. You are redirected to SpiderOak web.
   4. On the web, click on `Domains` -> `Manage` and perform the `Domain Claiming` web process.
   5. Once a domain claim is validated for your team, go to `Directory Management` -> `Add Key`. A `Directory Management Key` (aka `DMK`) will be provided.
