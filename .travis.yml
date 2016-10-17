@@ -1,0 +1,6 @@
+language: python
+install:
+- pip install git+git://github.com/SpiderOak/flow-python.git@master
+- pip install git+git://github.com/SpiderOak/ldap-reader.git@master
+- pip install -r requirements/requirements.txt
+script: test/test_local_db.py
