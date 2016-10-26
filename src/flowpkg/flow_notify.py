@@ -4,10 +4,12 @@ flow_notify.py
 Processes notifications coming from the flow service.
 """
 
+import time
 import threading
 import logging
 
 
+MUST_UPGRADE_ERROR_LATENCY = 60 * 60 * 6  # 6 hours
 LOG = logging.getLogger("flow_notify")
 
 
@@ -19,6 +21,7 @@ class FlowNotify(threading.Thread):
         self.dma_manager = dma_manager
         self.loop_listener = threading.Event()
         self.loop_listener.set()
+        self.last_must_upgrade_notify = 0.0
 
     def add_handler(self, handler):
         """Asociate the given handler to a certain type of notifications."""
@@ -32,6 +35,19 @@ class FlowNotify(threading.Thread):
         """Terminate the FlowNotify thread."""
         self.loop_listener.clear()
 
+    def log_notify_error(self, error):
+        """Logs notification errors to the ERROR log."""
+        if "Connection aborted" in error:
+            # No need to log these
+            return
+        if "Must Upgrade" in error:
+            now = time.time()
+            latency = abs(now - self.last_must_upgrade_notify)
+            if latency < MUST_UPGRADE_ERROR_LATENCY:
+                return
+            self.last_must_upgrade_notify = now
+        LOG.error("notification error: '%s'", error)
+
     def run(self):
         """Run the FlowNotify thread."""
         LOG.info("flow notify thread started")
@@ -44,6 +60,6 @@ class FlowNotify(threading.Thread):
             self.dma_manager.flow.process_one_notification(timeout_secs=0.05)
             error = self.dma_manager.flow.get_notification_error(
                 timeout_secs=0.05)
-            if error and "Connection aborted" not in error:
-                LOG.error("notification error: '%s'", error)
+            if error:
+                self.log_notify_error(error)
         LOG.info("flow notify thread finished")
