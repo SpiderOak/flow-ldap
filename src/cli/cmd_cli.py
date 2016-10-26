@@ -67,7 +67,8 @@ class CmdCli(object):
         except Exception as exception:
             print(
                 "ERROR loading the auto-connect config file, error: '%s'.\n"
-                "On Windows, this executable must be run in cmd in Administrator mode." % (
+                "On Windows, this executable must be run in cmd "
+                "in Administrator mode." % (
                     exception,
                 ))
             return
