@@ -23,3 +23,4 @@
 
 - [Installation Guide](doc/install.md)
 - [Usage Guide](doc/usage.md)
+- [Changelog](CHANGELOG.md)
