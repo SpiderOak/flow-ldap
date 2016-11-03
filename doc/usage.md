@@ -143,6 +143,7 @@ Setting config 'ldap-user'...
 
 > semaphor-ldap.exe config-set --key ldap-pw
 Password:
+Password:
 Setting config 'ldap-pw'...
 
 > semaphor-ldap.exe config-set --key group-dn --value cn=MyGroup,cn=Users,dc=example,dc=com
@@ -163,8 +164,20 @@ Server status:
 
 -------
 
-Before continuing with flow, we should list the users that will be controlled by Semaphor-LDAP server by using the `group-userlist` command.
-This option will list the users that belong to the group specified in the `group-dn` config variable.
+With an `OK` on the `ldap` status we can now proceed to perform an auth test using an account from LDAP.
+You have to use the e-mail address that will be used on Semaphor, together with the LDAP password of your account.
+
+```
+> semaphor-ldap.exe test-auth --username john@example.com
+Password:
+Password:
+Testing LDAP auth...
+Authentication succeeded.
+```
+
+-------
+
+There is one last ldap configuration step before continuing with flow. We should list the users that will be controlled by Semaphor-LDAP server by using the `group-userlist` command. This option will list the users that belong to the group specified in the `group-dn` config variable.
 
 ```
 > semaphor-ldap.exe group-userlist

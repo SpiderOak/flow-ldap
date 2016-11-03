@@ -12,6 +12,20 @@ from flow import Flow
 from src import utils
 
 
+def prompt_password(prompt="Password: "):
+    """Utility to prompt password via the console.
+    It prompts for the password twice, and returns
+    a tuple with a boolean if the passwords matched and
+    the password string.
+    """
+    pass1 = getpass.getpass(prompt)
+    pass2 = getpass.getpass(prompt)
+    if pass1 != pass2:
+        print("ERROR: passwords do not match.")
+        exit(1)
+    return pass1
+
+
 class CmdMethod(object):
     """'CmdMethod' is the abstract command line method class,
     all command line methods inherit from it and implement their
@@ -123,7 +137,7 @@ class ConfigSet(CmdMethod):
         if "value" not in args_dict or not args_dict["value"]:
             # Prompt variable
             if args_dict.get("key") == "ldap-pw":
-                args_dict["value"] = getpass.getpass("Password: ")
+                args_dict["value"] = prompt_password()
             else:
                 args_dict["value"] = raw_input("Value: ")
         print("Setting config '%s'..." % args_dict["key"])
@@ -143,6 +157,21 @@ class ConfigList(CmdMethod):
                 if key == "ldap-pw":
                     value = "*" * len(value)
                 print("  - %s = %s" % (key, value))
+
+
+class TestAuth(CmdMethod):
+
+    def request(self, args_dict):
+        if not args_dict.get("password"):
+            args_dict["password"] = prompt_password()
+        print("Testing LDAP auth...")
+        return args_dict
+
+    def result(self, result_dict):
+        result = "Authentication succeeded." \
+            if result_dict else \
+            "Authentication failed, check logs for more information."
+        print("Result: %s" % result)
 
 
 class DmaFingerprint(CmdMethod):

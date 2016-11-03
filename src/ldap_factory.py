@@ -68,21 +68,7 @@ class LDAPFactory(object):
                 "check 'uri', 'ldap-user' and " \
                 "'ldap-pw' LDAP variables" % (str(exception),)
         else:
-            # Perform a get_auth_username to check
-            # base-dn and dir-auth-source/dir-auth-username
-            # config values
-            try:
-                ldap_conn.get_auth_username(
-                    self.ldap_user,
-                )
-            except Exception as exception:
-                ldap_state = "ERROR: %s, " \
-                    "check 'ldap-user', 'dir-auth-source', " \
-                    "'dir-auth-username' and 'base-dn' variables" % (
-                        str(exception),
-                    )
-            else:
-                ldap_state = "OK"
+            ldap_state = "OK"
         finally:
             if ldap_conn:
                 ldap_conn.close()
