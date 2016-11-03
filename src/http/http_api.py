@@ -117,6 +117,17 @@ class HttpApi(object):
             "sync": self.server.ldap_sync.check_sync(),
         }
 
+    def test_auth(self, username, password):
+        """Performs a user auth test.
+        Arguments:
+        username : Semaphor account username.
+        password : LDAP password.[optional]
+        """
+        ldap_conn = self.ldap_factory.get_connection()
+        auth_result = ldap_conn.can_auth(username, password)
+        ldap_conn.close()
+        return auth_result
+
     def dma_fingerprint(self):
         """Returns the DMA fingerprint."""
         return self.dma_manager.get_dma_fingerprint()
