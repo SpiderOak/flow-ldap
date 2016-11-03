@@ -4,6 +4,7 @@ cmd_method.py
 Command line method classes.
 """
 
+import sys
 import string
 import getpass
 
@@ -22,7 +23,7 @@ def prompt_password(prompt="Password: "):
     pass2 = getpass.getpass(prompt)
     if pass1 != pass2:
         print("ERROR: passwords do not match.")
-        exit(1)
+        sys.exit(1)
     return pass1
 
 
