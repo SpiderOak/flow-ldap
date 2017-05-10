@@ -24,6 +24,7 @@ excluded-accounts =
 ldap-sync-on = no
 verbose = no
 log-dest =
+auto-updates-disabled =
 ########################################
 # LDAP
 uri = ldap://domain.com

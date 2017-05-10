@@ -22,6 +22,7 @@ from src.flowpkg.handler import (
     ChannelMemberEventHandler,
     UploadHandler,
     TeamMemberEventHandler,
+    NotifyEventHandler,
 )
 from src.log.flow_log_channel_handler import FlowRemoteLogger
 
@@ -48,7 +49,6 @@ class DMAManager(object):
         self.backup_cid = ""
         self.log_cid = ""
         self.test_cid = ""
-        self.glue_out_filename = ""
         self.ready = threading.Event()
         self.threads_running = False
 
@@ -75,31 +75,12 @@ class DMAManager(object):
         )
         self.set_db_backup_mins_from_config()
 
-    def check_glue_log_size(self):
-        """Check flowappglue stderr log file size.
-        If it is bigger than the limit, then clear the file.
-        """
-        try:
-            LOG.debug("checking glue log file size")
-            size = os.path.getsize(self.glue_out_filename)
-            if size > MAX_GLUE_LOG_SIZE:
-                LOG.debug("max size reached, clearing glue log file")
-                self.flow.clear_glue_log()
-        except Exception as exception:
-            LOG.error("error checking glue log file size: '%s'", exception)
 
     def init_flow(self):
         """Initialize the flow object and try to start up."""
         LOG.info("initializing the flow service")
-        self.glue_out_filename = app_platform.get_glue_out_filename()
         self.flow = flow_util.create_flow_object(
             self.config,
-            self.glue_out_filename,
-        )
-        # Register cron task to clean glue log file
-        self.cron.update_task_frequency(
-            CHECK_GLUE_LOG_FILE_SIZE_MINUTES,
-            self.check_glue_log_size,
         )
         self.start_up()
 
@@ -121,10 +102,12 @@ class DMAManager(object):
         self.cme_handler = ChannelMemberEventHandler(self)
         self.upload_handler = UploadHandler()
         self.tme_handler = TeamMemberEventHandler(self)
+        self.notify_handler = NotifyEventHandler()
         self.flow_notify.add_handler(self.ldap_bind_request_handler)
         self.flow_notify.add_handler(self.cme_handler)
         self.flow_notify.add_handler(self.upload_handler)
         self.flow_notify.add_handler(self.tme_handler)
+        self.flow_notify.add_handler(self.notify_handler)
 
     def start(self):
         """Start the notification listener thread and
@@ -203,7 +186,7 @@ class DMAManager(object):
         try:
             self.flow.account_id()
             return True
-        except:
+        except Exception:
             return False
 
     def create_device(self, flow_username, flow_password):

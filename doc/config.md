@@ -25,6 +25,9 @@ Enable/Disable verbose. Possible values are `yes`/`no`. Default = `no`.
 ### log-dest
 Set service logging destination. Possible values are `event` and `file` on Windows, `syslog` and `file` on Linux. Default values are `event` on Windows and `syslog` on Linux.
 
+### disable-auto-updates
+Disable auto-updates capability. Auto-updates is enabled by default, it is not recommended to disable it.
+
 ## LDAP Configuration variables
 
 The Semaphor-LDAP service connects and retrieves accounts from an LDAP server. You need to properly configure the LDAP configuration variables to connect to your LDAP server.

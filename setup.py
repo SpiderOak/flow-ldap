@@ -27,9 +27,12 @@ def set_win32_options(options):
         options={
             "py2exe": {
                 "dll_excludes": "CRYPT32.DLL",
+                "compressed": True,
             },
         },
+        zipfile=None,
     )
+
 
 setup_options = dict(
     name="semaphor-ldap",

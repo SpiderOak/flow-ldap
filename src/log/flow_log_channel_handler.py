@@ -31,7 +31,7 @@ class FlowLogChannelHandler(logging.Handler):
             self.flow_remote_logger.queue_message(record_str)
         except (KeyboardInterrupt, SystemExit):
             raise
-        except:
+        except Exception:
             self.handleError(record)
 
 
@@ -96,6 +96,6 @@ class FlowRemoteLogger(threading.Thread):
                     message,
                     timeout=10,
                 )
-            except:
+            except Exception:
                 logger.debug("send_message to log channel failed")
         logger.debug("flow remote logger thread finished")

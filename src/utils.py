@@ -4,6 +4,12 @@ utils.py
 Utilities and definitions for semaphor-ldap
 """
 
+import os
+import sys
+import logging
+import json
+
+
 VERSION = "1.0.2"
 
 AUTOCONNECT_CONFIG_FILE_NAME = "server-auto-connect.cfg"
@@ -24,6 +30,8 @@ DEFAULT_FLOW_SERVICE_USE_TLS = "true"
 FLOW_API_TIMEOUT = 15
 
 URI_FINGERPRINT = "semaphor://enterprise-sign-in/%(fp)s"
+
+LOG = logging.getLogger("utils")
 
 
 def raw_config_as_dict(config):
@@ -50,3 +58,35 @@ def raw_config_as_dict(config):
     as_dict = {s: dict(config.items(s))
                for s in config.sections()}
     return as_dict
+
+
+def restart_app():
+    """Restarts application by starting the launcher process."""
+    launcher_path = os.environ.get("LAUNCHER_PATH")
+    if not launcher_path:
+        LOG.error("LAUNCHER_PATH not set, not able to restart")
+    else:
+        args = [launcher_path]
+        args.extend(sys.argv[1:])
+        os.execv(launcher_path, args)
+
+
+def get_version():
+    """Return the version string of the Semaphor-LDAP bot.
+    It grabs the version from the build-version.json file.
+    """
+    main_dir = os.path.dirname(sys.executable)
+    build_version_path = os.path.join(
+        main_dir,
+        "resources",
+        "app",
+        "build-version.json",
+    )
+    version = "invalid"
+    try:
+        with open(build_version_path, "r") as bvf:
+            bvm = json.load(bvf)
+        version = "%s-%s" % (bvm["version"], bvm["build"])
+    except Exception:
+        LOG.exception("failed to load version from %s", build_version_path)
+    return version

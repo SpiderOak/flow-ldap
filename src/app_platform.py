@@ -23,7 +23,6 @@ $CONFIG/server-auto-connect.log
 
 import sys
 import os
-import time
 
 from src import utils
 
@@ -169,17 +168,6 @@ def get_default_flowappglue_path():
         _DEFAULT_FLOWAPPGLUE_BINARY_DEV_NAME,
     )
     return flowappglue_path
-
-
-def get_glue_out_filename():
-    """Returns a string with a default filename for the
-    flowappglue output log file.
-    Default Format: "semaphor_backend_%Y%m%d%H%M%S.log".
-    """
-    return os.path.join(
-        get_config_path(),
-        time.strftime("semaphor_backend_%Y%m%d%H%M%S.log")
-    )
 
 
 def get_default_server_config():

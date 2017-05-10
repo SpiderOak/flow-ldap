@@ -13,8 +13,14 @@ from src import utils, app_platform
 LOG = logging.getLogger("flow_util")
 
 
-def create_flow_object(config, glue_out_filename):
+def create_flow_object(config):
     """Creates and returns the flow object using the given 'config' dict."""
+    extra_config = {
+        "FlowCurrentVersion": utils.get_version(),
+    }
+    if config.get("auto-updates-disabled"):
+        LOG.info("auto updates functionality disabled by config")
+        extra_config["FlowUpdateSignPublicKey"] = "off"
     flow_config = {
         "host": config.get("flow-service-host") or
         utils.DEFAULT_FLOW_SERVICE_HOST,
@@ -27,8 +33,8 @@ def create_flow_object(config, glue_out_filename):
         "schema_dir": config.get("schema-dir") or
         app_platform.get_default_backend_schema_path(),
         "db_dir": app_platform.get_config_path(),
-        "glue_out_filename": glue_out_filename,
         "attachment_dir": app_platform.get_default_attachment_path(),
+        "extra_config": extra_config,
     }
     flow_args = {
         key: value for (key, value) in flow_config.items()

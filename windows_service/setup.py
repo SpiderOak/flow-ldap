@@ -36,6 +36,7 @@ class Target:
         self.name = NAME
         self.description = DESCRIPTION
 
+
 semaphor_windows_service = Target(
     description=DESCRIPTION,
     modules=["semaphor_ldap_ws"],
