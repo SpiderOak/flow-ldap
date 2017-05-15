@@ -18,6 +18,9 @@ def create_flow_object(config):
     extra_config = {
         "FlowCurrentVersion": utils.get_version(),
     }
+    auto_updates_pk = config.get("auto-updates-pk")
+    if auto_updates_pk:
+        extra_config["FlowUpdateSignPublicKey"] = auto_updates_pk
     if config.get("auto-updates-disabled"):
         LOG.info("auto updates functionality disabled by config")
         extra_config["FlowUpdateSignPublicKey"] = "off"
