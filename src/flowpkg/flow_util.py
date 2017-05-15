@@ -21,6 +21,9 @@ def create_flow_object(config):
     auto_updates_pk = config.get("auto-updates-pk")
     if auto_updates_pk:
         extra_config["FlowUpdateSignPublicKey"] = auto_updates_pk
+    auto_updates_interval_secs = config.get("auto-updates-interval-secs")
+    if auto_updates_interval_secs:
+        extra_config["FlowUpdateCheckIntervalSecs"] = auto_updates_interval_secs
     if config.get("auto-updates-disabled"):
         LOG.info("auto updates functionality disabled by config")
         extra_config["FlowUpdateSignPublicKey"] = "off"

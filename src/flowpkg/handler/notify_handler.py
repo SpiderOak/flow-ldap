@@ -11,7 +11,7 @@ from flow import Flow
 import src.utils
 
 
-LOG = logging.getLogger("chan_handler")
+LOG = logging.getLogger("notify_handler")
 
 
 class NotifyEventHandler(object):
