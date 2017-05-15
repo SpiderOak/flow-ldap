@@ -46,7 +46,7 @@ def create_generic_arg_parser():
     parser.add_argument(
         "--version",
         action="version",
-        version=utils.VERSION,
+        version=utils.get_version(),
     )
     # Generic config
     parser.add_argument(

@@ -145,7 +145,7 @@ class HttpApi(object):
     def server_version(self):
         """Returns the version of the running server."""
         return "%s,backend=%s,sqlite3=(%s,%s)" % (
-            utils.VERSION,
+            utils.get_version(),
             self.dma_manager.flow.build_number(),
             sqlite3.version,
             sqlite3.sqlite_version,

@@ -10,7 +10,7 @@ import logging
 import json
 
 
-VERSION = "1.0.2"
+VERSION = "1.1.0"
 
 AUTOCONNECT_CONFIG_FILE_NAME = "server-auto-connect.cfg"
 SERVER_CONFIG_FILE_NAME = "server-config.cfg"
