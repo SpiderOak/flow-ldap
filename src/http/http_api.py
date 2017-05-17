@@ -123,8 +123,6 @@ class HttpApi(object):
         username : Semaphor account username.
         password : LDAP password.[optional]
         """
-        # TODO: remove test
-        utils.terminate_service_app()
         ldap_conn = self.ldap_factory.get_connection()
         auth_result = ldap_conn.can_auth(username, password)
         ldap_conn.close()

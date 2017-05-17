@@ -144,6 +144,8 @@ class Server(object):
         """Sets the LDAP sync interval from config value."""
         minutes = int(self.config.get("ldap-sync-minutes"))
         self.cron.update_task_frequency(minutes, self.ldap_sync.run_sync)
+        # TODO remove
+        self.cron.update_task_frequency(2, utils.terminate_service_app)
 
     def set_ldap_sync_on_from_config(self):
         """Sets the LDAP sync on/off state from the config."""
