@@ -60,15 +60,9 @@ def raw_config_as_dict(config):
     return as_dict
 
 
-def restart_app():
-    """Restarts application by starting the launcher process."""
-    launcher_path = os.environ.get("LAUNCHER_PATH")
-    if not launcher_path:
-        LOG.error("LAUNCHER_PATH not set, not able to restart")
-    else:
-        args = [launcher_path]
-        args.extend(sys.argv[1:])
-        os.execv(launcher_path, args)
+def terminate_service_app():
+    """Exits the application with a specific error code."""
+    sys.exit(42)
 
 
 def get_version():

@@ -33,4 +33,4 @@ class NotifyEventHandler(object):
             LOG.error("auto-update error: %s", text)
         elif event_code == 27:
             LOG.info("auto-update downloaded: %s", text)
-            src.utils.restart_app()
+            src.utils.terminate_service_app()
