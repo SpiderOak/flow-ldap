@@ -62,6 +62,7 @@ def raw_config_as_dict(config):
 
 def terminate_service_app():
     """Exits the application with a specific error code."""
+    LOG.info("exit application for restart")
     sys.exit(42)
 
 
