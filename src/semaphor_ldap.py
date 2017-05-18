@@ -79,12 +79,14 @@ def signal_handler(sig, frame):
     sys.exit(0)
 
 
-def run_server(options, stop_server_event=None):
+def run_server(options, stop_server_event=None, return_data=None):
     """Run the Server object."""
     server_obj = None
     try:
         server_obj = Server(options, stop_server_event)
         server_obj.run()
+        if return_data and server_obj.restart_app_event.is_set():
+                return_data["restart"] = True
     except Exception:
         LOG.exception("server execution failed")
     finally:  # Also catches SystemExit

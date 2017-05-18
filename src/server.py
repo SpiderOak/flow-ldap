@@ -239,8 +239,7 @@ class Server(object):
         """Main thread will loop until the stop_server event is set."""
         while not self.stop_server.is_set():
             if self.restart_app_event.is_set():
-                LOG.info("exit 42!")
-                sys.exit(42)
+                break
             time.sleep(0.25)
 
     def cleanup(self):

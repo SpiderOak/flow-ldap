@@ -36,9 +36,10 @@ class SemaphorLDAPService(win32serviceutil.ServiceFramework):
         win32serviceutil.ServiceFramework.__init__(self, args)
         self._wait_stop = win32event.CreateEvent(None, 0, 0, None)
         self._stop_server_event = threading.Event()
+        self._return_data = {"restart": False}
         self._semaphor_ldap_thread = threading.Thread(
             target=semaphor_ldap.run_server,
-            args=(None, self._stop_server_event),
+            args=(None, self._stop_server_event, self._return_data),
         )
         self._timeout = 60 * 1000
 
@@ -82,6 +83,12 @@ class SemaphorLDAPService(win32serviceutil.ServiceFramework):
                 servicemanager.LogInfoMsg(
                     "Semaphor-LDAP thread terminated",
                 )
+
+        if self._return_data.get("restart"):
+            servicemanager.LogInfoMsg(
+                "Semaphor-LDAP trigger service restart",
+            )
+            os._exit(42)
 
 
 def CtrlHandler(ctrlType):
