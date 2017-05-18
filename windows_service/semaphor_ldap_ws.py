@@ -96,5 +96,7 @@ def CtrlHandler(ctrlType):
 
 
 if __name__ == '__main__':
+    print "SERVICE"
     win32api.SetConsoleCtrlHandler(CtrlHandler, True)
     win32serviceutil.HandleCommandLine(SemaphorLDAPService)
+    print "TEST"
