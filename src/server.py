@@ -50,6 +50,7 @@ class Server(object):
         self.ldap_factory = None
         self.threads_running = False
         self.ldap_sync_on = threading.Event()
+        self.restart_app_event = threading.Event()
         self.stop_server = stop_server_event or threading.Event()
 
         self.init_config_dir()
@@ -144,8 +145,11 @@ class Server(object):
         """Sets the LDAP sync interval from config value."""
         minutes = int(self.config.get("ldap-sync-minutes"))
         self.cron.update_task_frequency(minutes, self.ldap_sync.run_sync)
-        # TODO remove
-        self.cron.update_task_frequency(2, utils.terminate_service_app)
+        self.cron.update_task_frequency(2, self.restart_app)
+
+    def restart_app(self):
+        LOG.info("signaling restart!")
+        self.restart_app_event.set()
 
     def set_ldap_sync_on_from_config(self):
         """Sets the LDAP sync on/off state from the config."""
@@ -234,6 +238,9 @@ class Server(object):
     def wait_finish(self):
         """Main thread will loop until the stop_server event is set."""
         while not self.stop_server.is_set():
+            if self.restart_app_event.is_set():
+                LOG.info("exit 42!")
+                sys.exit(42)
             time.sleep(0.25)
 
     def cleanup(self):
