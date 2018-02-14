@@ -21,7 +21,7 @@ DEFAULT_FLOW_SERVICE_HOST = "flow.spideroak.com"
 DEFAULT_FLOW_SERVICE_PORT = "443"
 DEFAULT_FLOW_SERVICE_USE_TLS = "true"
 
-FLOW_API_TIMEOUT = 15
+FLOW_API_TIMEOUT = 300  # 5 minutes
 
 URI_FINGERPRINT = "semaphor://enterprise-sign-in/%(fp)s"
 

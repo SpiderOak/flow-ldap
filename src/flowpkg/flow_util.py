@@ -13,7 +13,7 @@ from src import utils, app_platform
 LOG = logging.getLogger("flow_util")
 
 
-def create_flow_object(config, glue_out_filename):
+def create_flow_object(config):
     """Creates and returns the flow object using the given 'config' dict."""
     flow_config = {
         "host": config.get("flow-service-host") or
@@ -27,7 +27,6 @@ def create_flow_object(config, glue_out_filename):
         "schema_dir": config.get("schema-dir") or
         app_platform.get_default_backend_schema_path(),
         "db_dir": app_platform.get_config_path(),
-        "glue_out_filename": glue_out_filename,
         "attachment_dir": app_platform.get_default_attachment_path(),
     }
     flow_args = {
@@ -299,4 +298,5 @@ def check_flow_connection(flow, tid, cid):
         tid,
         cid,
         "test",
+        timeout=10,
     )
